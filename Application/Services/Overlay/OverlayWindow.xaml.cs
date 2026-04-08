@@ -18,7 +18,17 @@ public partial class OverlayWindow : Window
         _monitor = monitor;
         PositionOnMonitor();
 
+        SourceInitialized += (_, _) => HideFromTaskSwitcher();
         Loaded += (_, _) => SetClickThrough();
+    }
+
+    private void HideFromTaskSwitcher()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+        exStyle |= NativeMethods.WS_EX_TOOLWINDOW;
+        exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
+        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
     }
 
     private void PositionOnMonitor()

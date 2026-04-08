@@ -4,7 +4,7 @@ public enum DockPosition { Top, Bottom, Left, Right }
 
 public class AppSettings
 {
-    public DockPosition PanelDockPosition { get; set; } = DockPosition.Left;
+    public DockPosition PanelDockPosition { get; set; } = DockPosition.Top;
     public double PanelLeft { get; set; } = double.NaN;
     public double PanelTop { get; set; } = double.NaN;
     public bool PanelPinned { get; set; } = false;

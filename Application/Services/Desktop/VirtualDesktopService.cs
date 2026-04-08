@@ -33,6 +33,7 @@ public class VirtualDesktopService : IVirtualDesktopService, IDisposable
     public event Action<Guid>? DesktopCreated;
     public event Action<Guid>? DesktopRemoved;
     public event Action<Guid, string>? DesktopRenamed;
+    public event Action<Guid, int, int>? DesktopMoved;
 
     public VirtualDesktopService()
     {
@@ -58,6 +59,7 @@ public class VirtualDesktopService : IVirtualDesktopService, IDisposable
                 VirtualDesktop.Created += OnSystemDesktopCreated;
                 VirtualDesktop.Destroyed += OnSystemDesktopDestroyed;
                 VirtualDesktop.Renamed += OnSystemDesktopRenamed;
+                VirtualDesktop.Moved += OnSystemDesktopMoved;
             }
         }
         catch (Exception ex)
@@ -85,6 +87,11 @@ public class VirtualDesktopService : IVirtualDesktopService, IDisposable
     private void OnSystemDesktopRenamed(object? sender, VirtualDesktopRenamedEventArgs e)
     {
         DesktopRenamed?.Invoke(e.Desktop.Id, e.Name);
+    }
+
+    private void OnSystemDesktopMoved(object? sender, VirtualDesktopMovedEventArgs e)
+    {
+        DesktopMoved?.Invoke(e.Desktop.Id, e.OldIndex, e.NewIndex);
     }
 
     public List<VirtualDesktopInfo> GetAllDesktops()
@@ -303,6 +310,7 @@ public class VirtualDesktopService : IVirtualDesktopService, IDisposable
             VirtualDesktop.Created -= OnSystemDesktopCreated;
             VirtualDesktop.Destroyed -= OnSystemDesktopDestroyed;
             VirtualDesktop.Renamed -= OnSystemDesktopRenamed;
+            VirtualDesktop.Moved -= OnSystemDesktopMoved;
         }
     }
 }

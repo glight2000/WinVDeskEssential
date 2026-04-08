@@ -23,4 +23,5 @@ public interface IVirtualDesktopService
     event Action<Guid>? DesktopCreated;
     event Action<Guid>? DesktopRemoved;
     event Action<Guid, string>? DesktopRenamed;
+    event Action<Guid, int, int>? DesktopMoved; // desktopId, oldIndex, newIndex
 }

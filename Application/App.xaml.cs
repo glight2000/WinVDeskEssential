@@ -1,8 +1,10 @@
 using Hardcodet.Wpf.TaskbarNotification;
 using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Interop;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 
 namespace WinVDeskEssential;
 
@@ -48,6 +50,14 @@ public partial class App : Application
             ShowInTaskbar = false,
             ShowActivated = false,
             Visibility = Visibility.Hidden,
+        };
+        _hiddenWindow.SourceInitialized += (_, _) =>
+        {
+            var hwnd = new WindowInteropHelper(_hiddenWindow).Handle;
+            var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+            exStyle |= NativeMethods.WS_EX_TOOLWINDOW;
+            exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
+            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
         };
         _hiddenWindow.Show();
         _hiddenWindow.Hide();

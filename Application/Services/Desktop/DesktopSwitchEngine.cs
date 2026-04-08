@@ -29,8 +29,14 @@ public class DesktopSwitchEngine : IDisposable
     private volatile bool _isSwitching;
     private System.Windows.Threading.DispatcherTimer? _pollTimer;
     private Guid _lastKnownDesktopId;
+    private List<Guid> _lastKnownDesktopOrder = new();
+    private List<string> _lastKnownDesktopNames = new();
 
     public event Action<string, DesktopSlot>? DesktopSwitched;
+    /// <summary>
+    /// Fired when the desktop list changes (add/remove/reorder) and the panel should refresh.
+    /// </summary>
+    public event Action? DesktopListChanged;
 
     public DesktopSwitchEngine(
         IVirtualDesktopService vdService,
@@ -43,6 +49,10 @@ public class DesktopSwitchEngine : IDisposable
 
         // Listen for system-level desktop changes (Win+Tab, taskbar, etc.)
         _vdService.DesktopChanged += OnSystemDesktopChanged;
+        _vdService.DesktopCreated += OnSystemDesktopCreated;
+        _vdService.DesktopRemoved += OnSystemDesktopRemoved;
+        _vdService.DesktopRenamed += OnSystemDesktopRenamed;
+        _vdService.DesktopMoved += OnSystemDesktopMoved;
     }
 
     public void Initialize(Dictionary<string, MonitorDesktopState> states)
@@ -53,6 +63,9 @@ public class DesktopSwitchEngine : IDisposable
         // Record initial desktop ID for polling
         var current = _vdService.GetCurrentDesktop();
         _lastKnownDesktopId = current?.Id ?? Guid.Empty;
+        var initialDesktops = _vdService.GetAllDesktops();
+        _lastKnownDesktopOrder = initialDesktops.Select(d => d.Id).ToList();
+        _lastKnownDesktopNames = initialDesktops.Select(d => d.Name).ToList();
 
         Logger.Log($"[SwitchEngine] Initialized with {states.Count} monitors, currentDesktop={_lastKnownDesktopId}");
         foreach (var kvp in states)
@@ -89,6 +102,20 @@ public class DesktopSwitchEngine : IDisposable
                 _lastKnownDesktopId = current.Id;
                 Logger.Log($"[SwitchEngine] Poll DETECTED change: {oldId} -> {current.Id} ({current.Name})");
                 OnSystemDesktopChanged(oldId, current.Id);
+            }
+
+            // Check for desktop list changes (add/remove/reorder/rename) as fallback
+            var currentDesktops = _vdService.GetAllDesktops();
+            var currentOrder = currentDesktops.Select(d => d.Id).ToList();
+            var currentNames = currentDesktops.Select(d => d.Name).ToList();
+            if (!currentOrder.SequenceEqual(_lastKnownDesktopOrder) ||
+                !currentNames.SequenceEqual(_lastKnownDesktopNames))
+            {
+                Logger.Log($"[SwitchEngine] Poll DETECTED desktop list/name change");
+                _lastKnownDesktopOrder = currentOrder;
+                _lastKnownDesktopNames = currentNames;
+                SyncDesktopsFromSystem();
+                DesktopListChanged?.Invoke();
             }
         }
         catch (Exception ex)
@@ -325,9 +352,135 @@ public class DesktopSwitchEngine : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Sync internal state with the system's actual desktop list.
+    /// Called when desktops are created, removed, or reordered externally.
+    /// </summary>
+    private void SyncDesktopsFromSystem()
+    {
+        var systemDesktops = _vdService.GetAllDesktops();
+        _lastKnownDesktopOrder = systemDesktops.Select(d => d.Id).ToList();
+        _lastKnownDesktopNames = systemDesktops.Select(d => d.Name).ToList();
+        var systemIds = systemDesktops.Select(d => d.Id).ToHashSet();
+
+        var systemNameMap = systemDesktops.ToDictionary(d => d.Id, d => d.Name);
+
+        foreach (var state in _monitorStates.Values)
+        {
+            // Remove desktops that no longer exist in the system
+            state.Desktops.RemoveAll(d => !systemIds.Contains(d.SystemDesktopId));
+
+            // Sync names from system for existing desktops
+            foreach (var slot in state.Desktops)
+            {
+                if (systemNameMap.TryGetValue(slot.SystemDesktopId, out var sysName) && sysName.Length > 0)
+                    slot.Name = sysName;
+            }
+
+            // Add any new system desktops not yet in our list
+            var knownIds = state.Desktops.Select(d => d.SystemDesktopId).ToHashSet();
+            foreach (var sd in systemDesktops)
+            {
+                if (!knownIds.Contains(sd.Id))
+                {
+                    state.Desktops.Add(new DesktopSlot
+                    {
+                        SystemDesktopId = sd.Id,
+                        Name = sd.Name.Length > 0 ? sd.Name : $"Desktop {state.Desktops.Count + 1}",
+                    });
+                }
+            }
+
+            // Reorder to match system order
+            var orderMap = systemDesktops.ToDictionary(d => d.Id, d => d.Index);
+            state.Desktops.Sort((a, b) =>
+            {
+                var ia = orderMap.GetValueOrDefault(a.SystemDesktopId, int.MaxValue);
+                var ib = orderMap.GetValueOrDefault(b.SystemDesktopId, int.MaxValue);
+                return ia.CompareTo(ib);
+            });
+
+            // Fix current index
+            if (state.CurrentIndex >= state.Desktops.Count)
+                state.CurrentIndex = Math.Max(0, state.Desktops.Count - 1);
+        }
+
+        // Update current index to match the actual current desktop
+        var current = _vdService.GetCurrentDesktop();
+        if (current != null)
+        {
+            _lastKnownDesktopId = current.Id;
+            foreach (var state in _monitorStates.Values)
+            {
+                var idx = state.Desktops.FindIndex(d => d.SystemDesktopId == current.Id);
+                if (idx >= 0) state.CurrentIndex = idx;
+            }
+        }
+    }
+
+    private void OnSystemDesktopCreated(Guid newDesktopId)
+    {
+        Logger.Log($"[SwitchEngine] System desktop created: {newDesktopId}");
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            lock (_switchLock)
+            {
+                SyncDesktopsFromSystem();
+                DesktopListChanged?.Invoke();
+            }
+        });
+    }
+
+    private void OnSystemDesktopRemoved(Guid removedDesktopId)
+    {
+        Logger.Log($"[SwitchEngine] System desktop removed: {removedDesktopId}");
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            lock (_switchLock)
+            {
+                SyncDesktopsFromSystem();
+                DesktopListChanged?.Invoke();
+            }
+        });
+    }
+
+    private void OnSystemDesktopMoved(Guid desktopId, int oldIndex, int newIndex)
+    {
+        Logger.Log($"[SwitchEngine] System desktop moved: {desktopId} from {oldIndex} to {newIndex}");
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            lock (_switchLock)
+            {
+                SyncDesktopsFromSystem();
+                DesktopListChanged?.Invoke();
+            }
+        });
+    }
+
+    private void OnSystemDesktopRenamed(Guid desktopId, string newName)
+    {
+        Logger.Log($"[SwitchEngine] System desktop renamed: {desktopId} -> {newName}");
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            lock (_switchLock)
+            {
+                foreach (var state in _monitorStates.Values)
+                {
+                    var slot = state.Desktops.FirstOrDefault(d => d.SystemDesktopId == desktopId);
+                    if (slot != null) slot.Name = newName;
+                }
+                DesktopListChanged?.Invoke();
+            }
+        });
+    }
+
     public void Dispose()
     {
         _pollTimer?.Stop();
         _vdService.DesktopChanged -= OnSystemDesktopChanged;
+        _vdService.DesktopCreated -= OnSystemDesktopCreated;
+        _vdService.DesktopRemoved -= OnSystemDesktopRemoved;
+        _vdService.DesktopRenamed -= OnSystemDesktopRenamed;
+        _vdService.DesktopMoved -= OnSystemDesktopMoved;
     }
 }

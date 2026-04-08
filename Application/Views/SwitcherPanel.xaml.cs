@@ -29,13 +29,24 @@ public partial class SwitcherPanel : Window
         _viewModel = viewModel;
         _monitor = monitor;
 
-        // Default vertical layout, centered on left edge
-        _viewModel.SetDockPosition(DockPosition.Left);
+        // Default horizontal layout at top
+        _viewModel.SetDockPosition(DockPosition.Top);
 
         // Always visible, never hide on deactivate
         SizeToContent = SizeToContent.WidthAndHeight;
 
+        // Hide from Alt+Tab / Win+Tab by setting WS_EX_TOOLWINDOW
+        SourceInitialized += (_, _) => HideFromTaskSwitcher();
         Loaded += (_, _) => PinToAllDesktops();
+    }
+
+    private void HideFromTaskSwitcher()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+        exStyle |= NativeMethods.WS_EX_TOOLWINDOW;
+        exStyle &= ~NativeMethods.WS_EX_APPWINDOW;
+        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle);
     }
 
     /// <summary>
@@ -45,8 +56,8 @@ public partial class SwitcherPanel : Window
     public void SetInitialPosition()
     {
         var bounds = _monitor.Bounds;
-        Left = bounds.Left;
-        Top = bounds.Top + (bounds.Height - ActualHeight) / 2;
+        Left = bounds.Left + (bounds.Width - ActualWidth) / 2;
+        Top = bounds.Top;
     }
 
     // --- Drag support ---
@@ -92,6 +103,7 @@ public partial class SwitcherPanel : Window
             _viewModel.SetDockPosition(DockPosition.Top);
             Dispatcher.BeginInvoke(() =>
             {
+                UpdateLayout();
                 Left = bounds.Left + (bounds.Width - ActualWidth) / 2;
                 Top = bounds.Top;
             });
@@ -100,6 +112,16 @@ public partial class SwitcherPanel : Window
         else
         {
             _viewModel.SetDockPosition(DockPosition.Left);
+            // After layout switch, ensure window stays within screen bounds
+            Dispatcher.BeginInvoke(() =>
+            {
+                UpdateLayout();
+                // Clamp to screen
+                if (Left < bounds.Left) Left = bounds.Left;
+                if (Left + ActualWidth > bounds.Right) Left = bounds.Right - ActualWidth;
+                if (Top < bounds.Top) Top = bounds.Top;
+                if (Top + ActualHeight > bounds.Bottom) Top = bounds.Bottom - ActualHeight;
+            });
             DockPositionChanged?.Invoke(DockPosition.Left);
         }
     }

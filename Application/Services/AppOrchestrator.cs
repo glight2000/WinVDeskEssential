@@ -60,38 +60,33 @@ public class AppOrchestrator : IDisposable
         foreach (var d in systemDesktops)
             Logger.Log($"  [{d.Index}] {d.Name} (id={d.Id})");
 
-        // 3. Build per-monitor state — always sync with ALL system desktops
+        // 3. Build per-monitor state — always use SYSTEM order as the source of truth
         var monitorStates = new Dictionary<string, MonitorDesktopState>();
         foreach (var monitor in monitors)
         {
+            // Load saved configs as a lookup (for background/watermark/border settings only)
             var savedDesktops = _configRepo.LoadDesktopsForMonitor(monitor.DeviceId);
+            var savedLookup = savedDesktops.ToDictionary(d => d.SystemDesktopId);
 
-            // Always ensure ALL system desktops are mapped.
-            // Add any system desktops not yet in the saved list.
-            var savedIds = savedDesktops.Select(d => d.SystemDesktopId).ToHashSet();
-            foreach (var sd in systemDesktops)
+            // Build desktop list in system order, merging saved settings where available
+            var desktops = new List<DesktopSlot>();
+            for (int i = 0; i < systemDesktops.Count; i++)
             {
-                if (!savedIds.Contains(sd.Id))
+                var sd = systemDesktops[i];
+                if (savedLookup.TryGetValue(sd.Id, out var saved))
                 {
-                    savedDesktops.Add(new DesktopSlot
+                    // Use system name (always up-to-date), keep saved visual settings
+                    saved.Name = sd.Name.Length > 0 ? sd.Name : saved.Name;
+                    desktops.Add(saved);
+                }
+                else
+                {
+                    desktops.Add(new DesktopSlot
                     {
                         SystemDesktopId = sd.Id,
-                        Name = sd.Name.Length > 0 ? sd.Name : $"Desktop {savedDesktops.Count + 1}",
+                        Name = sd.Name.Length > 0 ? sd.Name : $"Desktop {i + 1}",
                     });
                 }
-            }
-
-            // Remove desktops that no longer exist in the system
-            var systemIds = systemDesktops.Select(d => d.Id).ToHashSet();
-            savedDesktops.RemoveAll(d => !systemIds.Contains(d.SystemDesktopId));
-
-            if (savedDesktops.Count == 0)
-            {
-                savedDesktops = systemDesktops.Select((sd, i) => new DesktopSlot
-                {
-                    SystemDesktopId = sd.Id,
-                    Name = sd.Name.Length > 0 ? sd.Name : $"Desktop {i + 1}",
-                }).ToList();
             }
 
             // Determine current index based on system's active desktop
@@ -99,12 +94,12 @@ public class AppOrchestrator : IDisposable
             var currentIndex = 0;
             if (currentSystemDesktop != null)
             {
-                var idx = savedDesktops.FindIndex(d => d.SystemDesktopId == currentSystemDesktop.Id);
+                var idx = desktops.FindIndex(d => d.SystemDesktopId == currentSystemDesktop.Id);
                 if (idx >= 0) currentIndex = idx;
             }
 
             // Apply global watermark settings to all desktops
-            foreach (var slot in savedDesktops)
+            foreach (var slot in desktops)
             {
                 slot.Watermark.IsEnabled = _appSettings.WatermarkAlwaysOn;
                 slot.Watermark.Position = _appSettings.WatermarkPosition;
@@ -117,9 +112,13 @@ public class AppOrchestrator : IDisposable
             monitorStates[monitor.DeviceId] = new MonitorDesktopState
             {
                 Monitor = monitor,
-                Desktops = savedDesktops,
+                Desktops = desktops,
                 CurrentIndex = currentIndex
             };
+
+            Logger.Log($"[App] Monitor {monitor.DeviceId}: {desktops.Count} desktops in system order");
+            for (int i = 0; i < desktops.Count; i++)
+                Logger.Log($"  [{i}] {desktops[i].Name} (id={desktops[i].SystemDesktopId})");
         }
 
         // 4. Start window tracker (must be before switch engine uses it)
@@ -128,6 +127,7 @@ public class AppOrchestrator : IDisposable
         // 5. Initialize switch engine
         _switchEngine.Initialize(monitorStates);
         _switchEngine.DesktopSwitched += OnDesktopSwitched;
+        _switchEngine.DesktopListChanged += OnDesktopListChanged;
 
         // 6. Initialize overlays
         _overlayManager.Initialize();
@@ -180,6 +180,36 @@ public class AppOrchestrator : IDisposable
             _configRepo.SaveDesktopsForMonitor(kvp.Key, kvp.Value.Desktops);
 
         Logger.Log("[App] Initialization complete (keyboard hook NOT yet installed)");
+    }
+
+    private void OnDesktopListChanged()
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            // Apply watermark settings to all desktops (new ones won't have them)
+            foreach (var kvp in _switchEngine.GetMonitorStates())
+            {
+                foreach (var slot in kvp.Value.Desktops)
+                {
+                    slot.Watermark.IsEnabled = _appSettings.WatermarkAlwaysOn;
+                    slot.Watermark.Position = _appSettings.WatermarkPosition;
+                    slot.Watermark.FontSize = _appSettings.WatermarkFontSize;
+                    slot.Watermark.Opacity = _appSettings.WatermarkOpacity;
+                    slot.Watermark.Margin = _appSettings.WatermarkMargin;
+                }
+            }
+
+            _panel?.RefreshSelection();
+
+            // Update overlays and persist for all monitors
+            foreach (var kvp in _switchEngine.GetMonitorStates())
+            {
+                _overlayManager.UpdateOverlay(kvp.Key, kvp.Value.CurrentDesktop);
+                _configRepo.SaveDesktopsForMonitor(kvp.Key, kvp.Value.Desktops);
+            }
+
+            Logger.Log("[App] Desktop list changed — panel, overlay and config refreshed");
+        });
     }
 
     private void OnDesktopSwitched(string monitorDeviceId, DesktopSlot newDesktop)

@@ -26,7 +26,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type vm:DesktopSlotViewModel}">
-                    <Border Width="100" Height="100" Margin="2" CornerRadius="6" Cursor="Hand"
+                    <Border Width="100" Height="30" Margin="2" CornerRadius="4" Cursor="Hand"
                             BorderThickness="2" x:Name="ItemBorder"
                             MouseLeftButtonUp="OnItemClick" Tag="{Binding}">
                         <Border.Background>
