@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace VDesk.ViewModels;
+namespace WinVDeskEssential.ViewModels;
 
 public class ViewModelBase : INotifyPropertyChanged
 {

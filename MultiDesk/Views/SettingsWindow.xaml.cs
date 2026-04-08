@@ -1,8 +1,8 @@
-using VDesk.Models;
-using VDesk.Services.Hotkey;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Hotkey;
 using System.Windows;
 
-namespace VDesk.Views;
+namespace WinVDeskEssential.Views;
 
 public partial class SettingsWindow : Window
 {

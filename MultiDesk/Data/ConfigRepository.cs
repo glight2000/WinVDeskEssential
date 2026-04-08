@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using VDesk.Models;
+using WinVDeskEssential.Models;
 using System.Windows.Media;
 
-namespace VDesk.Data;
+namespace WinVDeskEssential.Data;
 
 public class ConfigRepository : IDisposable
 {
-    private readonly VDeskDbContext _db;
+    private readonly WinVDeskEssentialDbContext _db;
 
     public ConfigRepository()
     {
-        _db = new VDeskDbContext();
+        _db = new WinVDeskEssentialDbContext();
         _db.Database.EnsureCreated();
     }
 

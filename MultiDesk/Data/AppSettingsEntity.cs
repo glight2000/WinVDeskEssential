@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace VDesk.Data;
+namespace WinVDeskEssential.Data;
 
 public class AppSettingsEntity
 {

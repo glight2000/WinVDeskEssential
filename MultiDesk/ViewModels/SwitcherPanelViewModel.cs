@@ -1,11 +1,11 @@
-using VDesk.Models;
-using VDesk.Services.Desktop;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Desktop;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace VDesk.ViewModels;
+namespace WinVDeskEssential.ViewModels;
 
 public class SwitcherPanelViewModel : ViewModelBase
 {

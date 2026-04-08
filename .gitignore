@@ -22,7 +22,7 @@ desktop.ini
 *.pdb
 
 # Runtime config
-VDesk.ini
+WinVDeskEssential.ini
 MultiDesk.ini
 
 # Database

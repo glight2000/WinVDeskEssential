@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using VDesk.Models;
+using WinVDeskEssential.Models;
 
-namespace VDesk.Services.Interop;
+namespace WinVDeskEssential.Services.Interop;
 
 public class WindowInfo
 {

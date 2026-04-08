@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <!--<ApplicationIcon>Assets\icon.ico</ApplicationIcon>-->
-    <AssemblyName>VDesk</AssemblyName>
-    <RootNamespace>VDesk</RootNamespace>
+    <AssemblyName>WinVDeskEssential</AssemblyName>
+    <RootNamespace>WinVDeskEssential</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 

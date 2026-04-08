@@ -1,4 +1,4 @@
-namespace VDesk.Services.Desktop;
+namespace WinVDeskEssential.Services.Desktop;
 
 public class VirtualDesktopInfo
 {

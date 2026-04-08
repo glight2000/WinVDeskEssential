@@ -1,4 +1,4 @@
-<Window x:Class="VDesk.Services.Overlay.OverlayWindow"
+<Window x:Class="WinVDeskEssential.Services.Overlay.OverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"

@@ -1,10 +1,10 @@
-using VDesk.Services;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Interop;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 
-namespace VDesk.Services.Hotkey;
+namespace WinVDeskEssential.Services.Hotkey;
 
 public class KeyboardHookManager : IDisposable
 {

@@ -1,10 +1,10 @@
-using VDesk.Models;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Interop;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 
-namespace VDesk.Services.Hotkey;
+namespace WinVDeskEssential.Services.Hotkey;
 
 public class HotkeyManager : IDisposable
 {

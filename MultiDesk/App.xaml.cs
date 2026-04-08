@@ -1,10 +1,10 @@
 using Hardcodet.Wpf.TaskbarNotification;
-using VDesk.Services;
+using WinVDeskEssential.Services;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace VDesk;
+namespace WinVDeskEssential;
 
 public partial class App : Application
 {
@@ -20,7 +20,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             Services.Logger.Log($"[CRASH] Unhandled UI exception: {args.Exception}");
-            MessageBox.Show($"VDesk error:\n{args.Exception.Message}", "VDesk", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"WinVDeskEssential error:\n{args.Exception.Message}", "WinVDeskEssential", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
@@ -30,10 +30,10 @@ public partial class App : Application
         };
 
         // Prevent multiple instances
-        var mutex = new System.Threading.Mutex(true, "VDesk_SingleInstance", out bool isNew);
+        var mutex = new System.Threading.Mutex(true, "WinVDeskEssential_SingleInstance", out bool isNew);
         if (!isNew)
         {
-            MessageBox.Show("VDesk is already running.", "VDesk", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("WinVDeskEssential is already running.", "WinVDeskEssential", MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
@@ -60,8 +60,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to initialize VDesk:\n{ex.Message}",
-                "VDesk Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to initialize WinVDeskEssential:\n{ex.Message}",
+                "WinVDeskEssential Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
             return;
         }
@@ -183,7 +183,7 @@ public partial class App : Application
         _trayIcon = new TaskbarIcon
         {
             Icon = CreateDefaultIcon(),
-            ToolTipText = "VDesk - Virtual Desktop Manager",
+            ToolTipText = "WinVDeskEssential - Virtual Desktop Manager",
             ContextMenu = contextMenu,
         };
 

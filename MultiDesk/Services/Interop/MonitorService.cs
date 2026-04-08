@@ -1,7 +1,7 @@
-using VDesk.Models;
+using WinVDeskEssential.Models;
 using System.Windows;
 
-namespace VDesk.Services.Interop;
+namespace WinVDeskEssential.Services.Interop;
 
 public class MonitorService
 {

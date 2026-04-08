@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 [Flags]
 public enum CornerPosition

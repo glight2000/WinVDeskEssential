@@ -1,4 +1,4 @@
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 public class MonitorInfo
 {

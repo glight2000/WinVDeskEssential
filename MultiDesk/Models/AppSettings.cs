@@ -1,4 +1,4 @@
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 public enum DockPosition { Top, Bottom, Left, Right }
 
@@ -20,7 +20,7 @@ public class AppSettings
     public List<string> ExcludedProcessNames { get; set; } = new()
     {
         "explorer", "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost",
-        "SystemSettings", "TextInputHost", "LockApp", "LogiOverlay", "VDesk"
+        "SystemSettings", "TextInputHost", "LockApp", "LogiOverlay", "WinVDeskEssential"
     };
     public List<string> ExcludedWindowClasses { get; set; } = new()
     {

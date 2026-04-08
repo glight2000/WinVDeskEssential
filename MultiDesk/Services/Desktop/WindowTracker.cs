@@ -1,8 +1,8 @@
-using VDesk.Services;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Interop;
 using System.Diagnostics;
 
-namespace VDesk.Services.Desktop;
+namespace WinVDeskEssential.Services.Desktop;
 
 /// <summary>
 /// Maintains a real-time snapshot of which windows are on which monitor.

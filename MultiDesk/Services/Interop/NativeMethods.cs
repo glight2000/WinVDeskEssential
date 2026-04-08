@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace VDesk.Services.Interop;
+namespace WinVDeskEssential.Services.Interop;
 
 internal static class NativeMethods
 {

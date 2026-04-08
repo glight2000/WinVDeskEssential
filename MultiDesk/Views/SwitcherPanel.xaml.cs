@@ -1,14 +1,14 @@
-using VDesk.Models;
-using VDesk.Services;
-using VDesk.Services.Interop;
-using VDesk.ViewModels;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Interop;
+using WinVDeskEssential.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using WindowsDesktop;
 
-namespace VDesk.Views;
+namespace WinVDeskEssential.Views;
 
 public partial class SwitcherPanel : Window
 {

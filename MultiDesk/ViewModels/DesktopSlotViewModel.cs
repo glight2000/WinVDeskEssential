@@ -1,7 +1,7 @@
-using VDesk.Models;
+using WinVDeskEssential.Models;
 using System.Windows.Media;
 
-namespace VDesk.ViewModels;
+namespace WinVDeskEssential.ViewModels;
 
 public class DesktopSlotViewModel : ViewModelBase
 {

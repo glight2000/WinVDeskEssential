@@ -1,7 +1,7 @@
-<Window x:Class="VDesk.Views.SettingsWindow"
+<Window x:Class="WinVDeskEssential.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="VDesk Settings"
+        Title="WinVDeskEssential Settings"
         Width="600" Height="500"
         WindowStartupLocation="CenterScreen"
         Background="#FF1E1E2E"
@@ -79,7 +79,7 @@
 
                     <TextBlock Style="{StaticResource SectionTitle}" Text="System Hotkeys" />
                     <TextBlock Foreground="#80FFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
-                               Text="Override system virtual desktop hotkeys (Ctrl+Win+Arrow, etc.) so VDesk handles them instead. Requires administrator privileges." />
+                               Text="Override system virtual desktop hotkeys (Ctrl+Win+Arrow, etc.) so WinVDeskEssential handles them instead. Requires administrator privileges." />
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="OverrideHotkeysBtn" Content="Override System Hotkeys"
                                 Padding="12,6" Margin="0,0,8,0"
@@ -145,7 +145,7 @@
         <!-- About Tab -->
         <TabItem Header="About">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="VDesk" FontSize="28" FontWeight="Bold" Foreground="White"
+                <TextBlock Text="WinVDeskEssential" FontSize="28" FontWeight="Bold" Foreground="White"
                            HorizontalAlignment="Center" Margin="0,0,0,8" />
                 <TextBlock Text="Multi-Monitor Independent Virtual Desktop Manager"
                            FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" />

@@ -1,11 +1,11 @@
-using VDesk.Data;
-using VDesk.Models;
-using VDesk.Services;
-using VDesk.Services.Desktop;
+using WinVDeskEssential.Data;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Desktop;
 using System.Diagnostics;
 using System.Windows.Input;
 
-namespace VDesk.Services.Hotkey;
+namespace WinVDeskEssential.Services.Hotkey;
 
 public class HotkeyService : IDisposable
 {

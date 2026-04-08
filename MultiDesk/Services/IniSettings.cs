@@ -1,9 +1,9 @@
-using VDesk.Models;
+using WinVDeskEssential.Models;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 
-namespace VDesk.Services;
+namespace WinVDeskEssential.Services;
 
 /// <summary>
 /// Persists AppSettings to a .ini file next to the executable.
@@ -14,7 +14,7 @@ public static class IniSettings
     private static string GetIniPath()
     {
         var exePath = Environment.ProcessPath
-            ?? Path.Combine(AppContext.BaseDirectory, "VDesk.exe");
+            ?? Path.Combine(AppContext.BaseDirectory, "WinVDeskEssential.exe");
         return Path.ChangeExtension(exePath, ".ini");
     }
 
@@ -70,7 +70,7 @@ public static class IniSettings
             var ci = CultureInfo.InvariantCulture;
             var lines = new[]
             {
-                "# VDesk Settings",
+                "# WinVDeskEssential Settings",
                 "",
                 "# Panel",
                 $"PanelDockPosition={settings.PanelDockPosition}",

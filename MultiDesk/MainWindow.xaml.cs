@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace VDesk;
+namespace WinVDeskEssential;
 
 public partial class MainWindow : Window
 {

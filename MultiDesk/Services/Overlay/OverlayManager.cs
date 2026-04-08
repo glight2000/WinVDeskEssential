@@ -1,7 +1,7 @@
-using VDesk.Models;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Interop;
 
-namespace VDesk.Services.Overlay;
+namespace WinVDeskEssential.Services.Overlay;
 
 public class OverlayManager : IDisposable
 {

@@ -1,16 +1,16 @@
-using VDesk.Data;
-using VDesk.Models;
-using VDesk.Services.Desktop;
-using VDesk.Services.Hotkey;
-using VDesk.Services.Interop;
-using VDesk.Services.Overlay;
-using VDesk.Services.Wallpaper;
-using VDesk.ViewModels;
-using VDesk.Views;
+using WinVDeskEssential.Data;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Desktop;
+using WinVDeskEssential.Services.Hotkey;
+using WinVDeskEssential.Services.Interop;
+using WinVDeskEssential.Services.Overlay;
+using WinVDeskEssential.Services.Wallpaper;
+using WinVDeskEssential.ViewModels;
+using WinVDeskEssential.Views;
 using System.Diagnostics;
 using System.Windows;
 
-namespace VDesk.Services;
+namespace WinVDeskEssential.Services;
 
 public class AppOrchestrator : IDisposable
 {

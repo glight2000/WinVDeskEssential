@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 public class BorderSettings
 {

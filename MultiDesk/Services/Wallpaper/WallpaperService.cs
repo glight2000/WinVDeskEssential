@@ -1,8 +1,8 @@
-using VDesk.Models;
+using WinVDeskEssential.Models;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace VDesk.Services.Wallpaper;
+namespace WinVDeskEssential.Services.Wallpaper;
 
 /// <summary>
 /// Manages per-monitor wallpaper using the IDesktopWallpaper COM interface.
@@ -153,7 +153,7 @@ public class WallpaperService : IDisposable
         {
             var tempDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VDesk", "wallpapers");
+                "WinVDeskEssential", "wallpapers");
             Directory.CreateDirectory(tempDir);
 
             var hash = $"{bg.PrimaryColor}_{bg.SecondaryColor}_{bg.GradientAngle}".GetHashCode();

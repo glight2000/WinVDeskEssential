@@ -1,9 +1,9 @@
-using VDesk.Services;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Services;
+using WinVDeskEssential.Services.Interop;
 using System.Runtime.InteropServices;
 using WindowsDesktop;
 
-namespace VDesk.Services.Desktop;
+namespace WinVDeskEssential.Services.Desktop;
 
 public class VirtualDesktopService : IVirtualDesktopService, IDisposable
 {

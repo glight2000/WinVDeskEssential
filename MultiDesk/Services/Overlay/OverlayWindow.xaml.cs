@@ -1,12 +1,12 @@
-using VDesk.Models;
-using VDesk.Services.Interop;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Interop;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using WindowsDesktop;
 
-namespace VDesk.Services.Overlay;
+namespace WinVDeskEssential.Services.Overlay;
 
 public partial class OverlayWindow : Window
 {

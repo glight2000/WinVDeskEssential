@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using System.IO;
 
-namespace VDesk.Data;
+namespace WinVDeskEssential.Data;
 
-public class VDeskDbContext : DbContext
+public class WinVDeskEssentialDbContext : DbContext
 {
     public DbSet<DesktopConfigEntity> DesktopConfigs { get; set; } = null!;
     public DbSet<HotkeyConfigEntity> HotkeyConfigs { get; set; } = null!;
@@ -11,10 +11,10 @@ public class VDeskDbContext : DbContext
 
     private readonly string _dbPath;
 
-    public VDeskDbContext()
+    public WinVDeskEssentialDbContext()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var dir = Path.Combine(appData, "VDesk");
+        var dir = Path.Combine(appData, "WinVDeskEssential");
         Directory.CreateDirectory(dir);
         _dbPath = Path.Combine(dir, "multidesk.db");
     }

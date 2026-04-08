@@ -1,4 +1,4 @@
-# VDesk - Win11 Virtual Desktop Enhancer
+# WinVDeskEssential - Win11 Virtual Desktop Enhancer
 
 Windows 11 虚拟桌面增强工具。解决 Windows 原生虚拟桌面切换时所有显示器同步切换的问题，让主屏独立切换桌面，副屏窗口保持不动。
 
@@ -11,7 +11,7 @@ Windows 11 虚拟桌面增强工具。解决 Windows 原生虚拟桌面切换时
 
 ## 原理
 
-Windows 虚拟桌面切换是全局的（所有屏幕一起切）。VDesk 通过检测桌面切换事件，在切换完成后立即将副屏窗口移动到新桌面，使其保持可见。
+Windows 虚拟桌面切换是全局的（所有屏幕一起切）。WinVDeskEssential 通过检测桌面切换事件，在切换完成后立即将副屏窗口移动到新桌面，使其保持可见。
 
 - 使用 `IVirtualDesktopManager` COM 接口检测当前桌面
 - 使用 `Slions.VirtualDesktop` 库进行桌面切换和窗口移动
@@ -34,7 +34,7 @@ Windows 虚拟桌面切换是全局的（所有屏幕一起切）。VDesk 通过
 
 ## 配置持久化
 
-所有用户配置保存在 exe 同目录的 `VDesk.ini` 文件中，重启后自动恢复。
+所有用户配置保存在 exe 同目录的 `WinVDeskEssential.ini` 文件中，重启后自动恢复。
 
 ## 技术栈
 
@@ -47,18 +47,18 @@ Windows 虚拟桌面切换是全局的（所有屏幕一起切）。VDesk 通过
 ## 构建
 
 ```bash
-dotnet build MultiDesk/VDesk.csproj -c Release
+dotnet build MultiDesk/WinVDeskEssential.csproj -c Release
 ```
 
 发布单文件独立 exe：
 
 ```bash
-dotnet publish MultiDesk/VDesk.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+dotnet publish MultiDesk/WinVDeskEssential.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
 ## 使用
 
-1. 运行 `VDesk.exe`
+1. 运行 `WinVDeskEssential.exe`
 2. 系统托盘出现蓝色 "M" 图标
 3. 在主屏使用 `Ctrl+Win+Arrow` 切换桌面，副屏窗口自动保持
 4. 拖拽面板到合适位置

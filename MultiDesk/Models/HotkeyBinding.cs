@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 public class HotkeyBinding
 {

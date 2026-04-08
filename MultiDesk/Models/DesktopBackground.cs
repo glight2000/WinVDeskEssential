@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace VDesk.Models;
+namespace WinVDeskEssential.Models;
 
 public enum BackgroundType { SolidColor, Gradient, Image }
 public enum FillMode { Stretch, Fill, Fit, Center, Tile }

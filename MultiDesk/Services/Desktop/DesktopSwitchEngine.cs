@@ -1,9 +1,9 @@
-using VDesk.Models;
-using VDesk.Services.Interop;
-using VDesk.Services;
+using WinVDeskEssential.Models;
+using WinVDeskEssential.Services.Interop;
+using WinVDeskEssential.Services;
 using System.Diagnostics;
 
-namespace VDesk.Services.Desktop;
+namespace WinVDeskEssential.Services.Desktop;
 
 /// <summary>
 /// Core engine: per-monitor independent virtual desktop switching.
