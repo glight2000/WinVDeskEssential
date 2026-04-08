@@ -1,0 +1,37 @@
+# Build
+bin/
+obj/
+publish/
+publish-single/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Output
+*.exe
+*.dll
+*.pdb
+
+# Runtime config
+VDesk.ini
+MultiDesk.ini
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# NuGet
+packages/
+
+# Logs
+debug.log
