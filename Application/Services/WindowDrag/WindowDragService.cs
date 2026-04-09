@@ -89,7 +89,7 @@ public class WindowDragService : IDisposable
                 if (_isDragging || _isResizing)
                 {
                     OnMouseMove(mouseData.pt);
-                    return (IntPtr)1;
+                    // Don't swallow — let cursor keep moving
                 }
                 break;
 
