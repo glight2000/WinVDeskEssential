@@ -53,6 +53,8 @@ public static class IniSettings
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.WatermarkOpacity = d;
             if (dict.TryGetValue("WatermarkMargin", out v))
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.WatermarkMargin = d;
+            if (dict.TryGetValue("AltDragEnabled", out v))
+                if (bool.TryParse(v, out var b)) settings.AltDragEnabled = b;
 
             Logger.Log($"[Settings] Loaded from {path}");
         }
@@ -83,6 +85,9 @@ public static class IniSettings
                 $"WatermarkFontSize={settings.WatermarkFontSize.ToString(ci)}",
                 $"WatermarkOpacity={settings.WatermarkOpacity.ToString(ci)}",
                 $"WatermarkMargin={settings.WatermarkMargin.ToString(ci)}",
+                "",
+                "# AltDrag",
+                $"AltDragEnabled={settings.AltDragEnabled}",
             };
             File.WriteAllLines(path, lines);
         }

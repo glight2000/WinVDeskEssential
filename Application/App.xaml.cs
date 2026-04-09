@@ -180,6 +180,13 @@ public partial class App : Application
 
         contextMenu.Items.Add(new Separator());
 
+        // AltDrag toggle
+        var altDragItem = new MenuItem { Header = "Alt+Drag (Move/Resize)", IsCheckable = true, IsChecked = true };
+        altDragItem.Click += (_, _) => _orchestrator?.SetAltDragEnabled(altDragItem.IsChecked);
+        contextMenu.Items.Add(altDragItem);
+
+        contextMenu.Items.Add(new Separator());
+
         var settingsItem = new MenuItem { Header = "Settings" };
         settingsItem.Click += (_, _) => _orchestrator?.ShowSettingsWindow();
         contextMenu.Items.Add(settingsItem);

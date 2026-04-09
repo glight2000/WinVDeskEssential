@@ -5,6 +5,14 @@ $proj = Join-Path $root "Application\WinVDeskEssential.csproj"
 $publishDir = Join-Path $root "publish"
 $dest = Join-Path $root "WinVDeskEssential.exe"
 
+# Kill running instance if any
+$proc = Get-Process -Name "WinVDeskEssential" -ErrorAction SilentlyContinue
+if ($proc) {
+    Write-Host "Stopping running WinVDeskEssential..." -ForegroundColor Yellow
+    $proc | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+}
+
 # Clean previous publish
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 
@@ -18,5 +26,4 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $publishDir "WinVDeskEssential.exe") $dest -Force
 Write-Host "Done" -ForegroundColor Green
-Write-Host "  Single exe : $dest (needs publish/ DLLs nearby)" -ForegroundColor Gray
-Write-Host "  Full app   : $publishDir\WinVDeskEssential.exe" -ForegroundColor Gray
+Write-Host "  Run: $publishDir\WinVDeskEssential.exe" -ForegroundColor Gray

@@ -5,6 +5,7 @@ using WinVDeskEssential.Services.Hotkey;
 using WinVDeskEssential.Services.Interop;
 using WinVDeskEssential.Services.Overlay;
 using WinVDeskEssential.Services.Wallpaper;
+using WinVDeskEssential.Services.WindowDrag;
 using WinVDeskEssential.ViewModels;
 using WinVDeskEssential.Views;
 using System.Diagnostics;
@@ -24,6 +25,7 @@ public class AppOrchestrator : IDisposable
     private readonly HotkeyManager _hotkeyManager;
     private readonly KeyboardHookManager _keyboardHook;
     private readonly HotkeyService _hotkeyService;
+    private readonly WindowDragService _windowDrag;
     private readonly ConfigRepository _configRepo;
     private readonly AppSettings _appSettings;
     private SwitcherPanel? _panel;
@@ -44,6 +46,7 @@ public class AppOrchestrator : IDisposable
         _hotkeyManager = new HotkeyManager();
         _keyboardHook = new KeyboardHookManager();
         _hotkeyService = new HotkeyService(_hotkeyManager, _keyboardHook, _switchEngine, _configRepo);
+        _windowDrag = new WindowDragService { Enabled = _appSettings.AltDragEnabled };
     }
 
     public void Initialize(Window mainWindow)
@@ -262,7 +265,8 @@ public class AppOrchestrator : IDisposable
     public void InstallKeyboardHook()
     {
         _keyboardHook.Install();
-        Logger.Log("[App] Keyboard hook installed (deferred, message loop is now active)");
+        _windowDrag.Install();
+        Logger.Log("[App] Keyboard hook + AltDrag mouse hook installed (deferred, message loop is now active)");
     }
 
     private void SavePanelPosition()
@@ -347,9 +351,17 @@ public class AppOrchestrator : IDisposable
     public void ShowSettingsWindow() => OpenSettings();
     public void TogglePanelForCurrentMonitor() => TogglePanels();
 
+    public void SetAltDragEnabled(bool enabled)
+    {
+        _appSettings.AltDragEnabled = enabled;
+        _windowDrag.Enabled = enabled;
+        SaveSettings();
+    }
+
     public void Dispose()
     {
         _hotkeyService.Dispose();
+        _windowDrag.Dispose();
         _switchEngine.Dispose();
         _windowTracker.Dispose();
         _overlayManager.Dispose();

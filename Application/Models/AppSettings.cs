@@ -15,6 +15,7 @@ public class AppSettings
     public double WatermarkFontSize { get; set; } = 24;
     public double WatermarkOpacity { get; set; } = 0.35;
     public double WatermarkMargin { get; set; } = 40;
+    public bool AltDragEnabled { get; set; } = true;
     public bool StartWithWindows { get; set; } = false;
     public bool SystemHotkeysOverridden { get; set; } = false;
     public List<string> ExcludedProcessNames { get; set; } = new()
