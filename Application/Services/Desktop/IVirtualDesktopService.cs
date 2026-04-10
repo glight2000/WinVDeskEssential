@@ -17,6 +17,8 @@ public interface IVirtualDesktopService
     void RemoveDesktop(Guid desktopId);
     void RenameDesktop(Guid desktopId, string name);
     void MoveWindowToDesktop(IntPtr hwnd, Guid desktopId);
+    void MoveWindowToCurrentDesktop(IntPtr hwnd);
+    bool IsWindowOnCurrentDesktop(IntPtr hwnd);
     Guid? GetDesktopIdForWindow(IntPtr hwnd);
 
     event Action<Guid, Guid>? DesktopChanged; // oldId, newId

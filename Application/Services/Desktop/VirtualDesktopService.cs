@@ -278,6 +278,70 @@ public class VirtualDesktopService : IVirtualDesktopService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Reliably moves a window to whichever desktop is currently displayed.
+    /// Uses the pin/unpin trick: pinning a window shows it on all desktops,
+    /// unpinning then "grounds" it on the currently-viewed desktop.
+    /// This avoids the race where SetForegroundWindow on a foreign-desktop
+    /// window would otherwise switch the display instead of moving the window.
+    /// </summary>
+    public void MoveWindowToCurrentDesktop(IntPtr hwnd)
+    {
+        if (!_initialized) return;
+
+        try
+        {
+            // Fast path: if window is already on current desktop, nothing to do.
+            var current = VirtualDesktop.Current;
+            var windowDesktop = VirtualDesktop.FromHwnd(hwnd);
+            if (windowDesktop != null && current != null && windowDesktop.Id == current.Id)
+                return;
+
+            // Pin/unpin trick — leaves the window on the current desktop.
+            VirtualDesktop.PinWindow(hwnd);
+            VirtualDesktop.UnpinWindow(hwnd);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"MoveWindowToCurrentDesktop failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Returns true if the window is visible on the currently-displayed virtual desktop
+    /// (i.e. either on the current desktop, or pinned to all desktops).
+    /// </summary>
+    public bool IsWindowOnCurrentDesktop(IntPtr hwnd)
+    {
+        if (!_initialized || hwnd == IntPtr.Zero) return false;
+
+        // Preferred: use the public IVirtualDesktopManager COM interface
+        if (_vdManager != null)
+        {
+            try
+            {
+                int hr = _vdManager.IsWindowOnCurrentVirtualDesktop(hwnd, out bool onCurrent);
+                if (hr == 0) return onCurrent;
+            }
+            catch { /* fall through */ }
+        }
+
+        // Fallback: compare desktop IDs
+        try
+        {
+            var current = VirtualDesktop.Current;
+            var windowDesktop = VirtualDesktop.FromHwnd(hwnd);
+            if (current == null) return false;
+            // Pinned windows have no specific desktop — treat as "on current"
+            if (windowDesktop == null) return true;
+            return windowDesktop.Id == current.Id;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public Guid? GetDesktopIdForWindow(IntPtr hwnd)
     {
         if (!_initialized) return null;

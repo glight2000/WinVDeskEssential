@@ -50,8 +50,8 @@ public partial class SwitcherPanel : Window
     }
 
     /// <summary>
-    /// Position on the primary monitor's left edge, centered vertically.
-    /// Called once after first show.
+    /// Position at the top of the primary monitor, horizontally centered.
+    /// Only called when no saved position exists.
     /// </summary>
     public void SetInitialPosition()
     {
@@ -64,10 +64,6 @@ public partial class SwitcherPanel : Window
 
     private void OnDragStart(object sender, MouseButtonEventArgs e)
     {
-        // Only drag from the background, not from item clicks
-        if (e.OriginalSource is Border b && b.Tag is DesktopSlotViewModel)
-            return;
-
         _isDragging = true;
         _dragStartMouse = PointToScreen(e.GetPosition(this));
         _dragStartLeft = Left;
@@ -76,6 +72,7 @@ public partial class SwitcherPanel : Window
 
         MouseMove += OnDragMove;
         MouseLeftButtonUp += OnDragEnd;
+        e.Handled = true;
     }
 
     private void OnDragMove(object sender, MouseEventArgs e)
@@ -94,36 +91,31 @@ public partial class SwitcherPanel : Window
         MouseMove -= OnDragMove;
         MouseLeftButtonUp -= OnDragEnd;
 
-        // Auto-switch layout based on position
+        // Decide dock orientation based on proximity to top edge.
+        // Only the orientation changes — position stays where the user dropped it,
+        // clamped to screen bounds.
         var bounds = _monitor.Bounds;
         bool nearTop = Top <= bounds.Top + TopEdgeThreshold;
+        var newDock = nearTop ? DockPosition.Top : DockPosition.Left;
+        _viewModel.SetDockPosition(newDock);
 
-        if (nearTop)
+        // Re-measure after orientation change, then clamp.
+        Dispatcher.BeginInvoke(() =>
         {
-            _viewModel.SetDockPosition(DockPosition.Top);
-            Dispatcher.BeginInvoke(() =>
-            {
-                UpdateLayout();
-                Left = bounds.Left + (bounds.Width - ActualWidth) / 2;
-                Top = bounds.Top;
-            });
-            DockPositionChanged?.Invoke(DockPosition.Top);
-        }
-        else
-        {
-            _viewModel.SetDockPosition(DockPosition.Left);
-            // After layout switch, ensure window stays within screen bounds
-            Dispatcher.BeginInvoke(() =>
-            {
-                UpdateLayout();
-                // Clamp to screen
-                if (Left < bounds.Left) Left = bounds.Left;
-                if (Left + ActualWidth > bounds.Right) Left = bounds.Right - ActualWidth;
-                if (Top < bounds.Top) Top = bounds.Top;
-                if (Top + ActualHeight > bounds.Bottom) Top = bounds.Bottom - ActualHeight;
-            });
-            DockPositionChanged?.Invoke(DockPosition.Left);
-        }
+            UpdateLayout();
+            ClampToScreen();
+        });
+
+        DockPositionChanged?.Invoke(newDock);
+    }
+
+    private void ClampToScreen()
+    {
+        var bounds = _monitor.Bounds;
+        if (Left < bounds.Left) Left = bounds.Left;
+        if (Top < bounds.Top) Top = bounds.Top;
+        if (Left + ActualWidth > bounds.Right) Left = bounds.Right - ActualWidth;
+        if (Top + ActualHeight > bounds.Bottom) Top = bounds.Bottom - ActualHeight;
     }
 
     // --- Item click to switch desktop ---
@@ -135,6 +127,31 @@ public partial class SwitcherPanel : Window
         {
             _viewModel.SwitchToDesktopCommand.Execute(vm);
         }
+    }
+
+    // --- Quick window click handlers ---
+
+    private void OnQuickWindowClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDragging) return;
+        if (sender is Border b && b.Tag is Models.QuickWindow qw)
+        {
+            _viewModel.ActivateQuickWindowCommand.Execute(qw);
+        }
+    }
+
+    private void OnQuickWindowRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border b && b.Tag is Models.QuickWindow qw)
+        {
+            _viewModel.RemoveQuickWindowCommand.Execute(qw);
+        }
+    }
+
+    private void OnPickerClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDragging) return;
+        _viewModel.PickQuickWindowCommand.Execute(null);
     }
 
     // --- Pin to all desktops ---
@@ -158,5 +175,10 @@ public partial class SwitcherPanel : Window
     public void RefreshSelection()
     {
         _viewModel.RefreshDesktops();
+    }
+
+    public IntPtr GetHwnd()
+    {
+        return new WindowInteropHelper(this).Handle;
     }
 }

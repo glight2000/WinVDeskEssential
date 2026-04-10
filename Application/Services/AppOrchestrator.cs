@@ -4,6 +4,7 @@ using WinVDeskEssential.Services.Desktop;
 using WinVDeskEssential.Services.Hotkey;
 using WinVDeskEssential.Services.Interop;
 using WinVDeskEssential.Services.Overlay;
+using WinVDeskEssential.Services.QuickWindow;
 using WinVDeskEssential.Services.Wallpaper;
 using WinVDeskEssential.Services.WindowDrag;
 using WinVDeskEssential.ViewModels;
@@ -26,6 +27,7 @@ public class AppOrchestrator : IDisposable
     private readonly KeyboardHookManager _keyboardHook;
     private readonly HotkeyService _hotkeyService;
     private readonly WindowDragService _windowDrag;
+    private readonly QuickWindowService _quickWindowService;
     private readonly ConfigRepository _configRepo;
     private readonly AppSettings _appSettings;
     private SwitcherPanel? _panel;
@@ -47,6 +49,7 @@ public class AppOrchestrator : IDisposable
         _keyboardHook = new KeyboardHookManager();
         _hotkeyService = new HotkeyService(_hotkeyManager, _keyboardHook, _switchEngine, _configRepo);
         _windowDrag = new WindowDragService { Enabled = _appSettings.AltDragEnabled };
+        _quickWindowService = new QuickWindowService(_vdService);
     }
 
     public void Initialize(Window mainWindow)
@@ -143,12 +146,13 @@ public class AppOrchestrator : IDisposable
                         ?? monitorStates.Values.First();
         _primaryMonitorId = primaryState.Monitor.DeviceId;
         {
-            var vm = new SwitcherPanelViewModel(_switchEngine);
+            var vm = new SwitcherPanelViewModel(_switchEngine, _quickWindowService);
             vm.SetMonitor(primaryState.Monitor.DeviceId, primaryState.Monitor.DisplayName);
             vm.SettingsRequested += OpenSettings;
 
             _panel = new SwitcherPanel(vm, primaryState.Monitor);
             _panel.Show();
+            _quickWindowService.RegisterOwnWindow(_panel.GetHwnd());
 
             // Restore saved position or use default
             if (!double.IsNaN(_appSettings.PanelLeft) && !double.IsNaN(_appSettings.PanelTop))
@@ -362,6 +366,7 @@ public class AppOrchestrator : IDisposable
     {
         _hotkeyService.Dispose();
         _windowDrag.Dispose();
+        _quickWindowService.Dispose();
         _switchEngine.Dispose();
         _windowTracker.Dispose();
         _overlayManager.Dispose();

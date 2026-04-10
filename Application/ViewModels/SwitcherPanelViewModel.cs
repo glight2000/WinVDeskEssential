@@ -1,5 +1,6 @@
 using WinVDeskEssential.Models;
 using WinVDeskEssential.Services.Desktop;
+using WinVDeskEssential.Services.QuickWindow;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,12 +11,15 @@ namespace WinVDeskEssential.ViewModels;
 public class SwitcherPanelViewModel : ViewModelBase
 {
     private readonly DesktopSwitchEngine _switchEngine;
+    private readonly QuickWindowService _quickWindows;
     private string _currentMonitorId = string.Empty;
     private string _monitorDisplayName = string.Empty;
     private Orientation _panelOrientation = Orientation.Vertical;
     private Transform _itemTextTransform = Transform.Identity;
+    private bool _isPickingWindow;
 
     public ObservableCollection<DesktopSlotViewModel> Desktops { get; } = new();
+    public ObservableCollection<Models.QuickWindow> QuickWindows => _quickWindows.Windows;
 
     public string MonitorDisplayName
     {
@@ -35,17 +39,28 @@ public class SwitcherPanelViewModel : ViewModelBase
         set => SetProperty(ref _itemTextTransform, value);
     }
 
+    public bool IsPickingWindow
+    {
+        get => _isPickingWindow;
+        private set => SetProperty(ref _isPickingWindow, value);
+    }
+
     public ICommand SwitchToDesktopCommand { get; }
     public ICommand AddDesktopCommand { get; }
     public ICommand RemoveDesktopCommand { get; }
     public ICommand RenameDesktopCommand { get; }
     public ICommand OpenSettingsCommand { get; }
+    public ICommand PickQuickWindowCommand { get; }
+    public ICommand ActivateQuickWindowCommand { get; }
+    public ICommand RemoveQuickWindowCommand { get; }
 
     public event Action? SettingsRequested;
 
-    public SwitcherPanelViewModel(DesktopSwitchEngine switchEngine)
+    public SwitcherPanelViewModel(DesktopSwitchEngine switchEngine, QuickWindowService quickWindows)
     {
         _switchEngine = switchEngine;
+        _quickWindows = quickWindows;
+        _quickWindows.PickingStateChanged += () => IsPickingWindow = _quickWindows.IsPicking;
 
         SwitchToDesktopCommand = new RelayCommand(param =>
         {
@@ -78,6 +93,26 @@ public class SwitcherPanelViewModel : ViewModelBase
         RenameDesktopCommand = new RelayCommand(param => { });
 
         OpenSettingsCommand = new RelayCommand(() => SettingsRequested?.Invoke());
+
+        PickQuickWindowCommand = new RelayCommand(() =>
+        {
+            if (_quickWindows.IsPicking)
+                _quickWindows.CancelPicking();
+            else
+                _quickWindows.StartPicking();
+        });
+
+        ActivateQuickWindowCommand = new RelayCommand(param =>
+        {
+            if (param is Models.QuickWindow qw)
+                _quickWindows.ActivateWindow(qw);
+        });
+
+        RemoveQuickWindowCommand = new RelayCommand(param =>
+        {
+            if (param is Models.QuickWindow qw)
+                _quickWindows.RemoveWindow(qw);
+        });
     }
 
     public void SetDockPosition(DockPosition dock)

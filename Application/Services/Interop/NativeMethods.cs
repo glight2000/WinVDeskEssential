@@ -164,10 +164,22 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     public const int SW_RESTORE = 9;
+    public const int SW_MINIMIZE = 6;
+    public const int SW_SHOWNORMAL = 1;
 
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
     public const int VK_MENU = 0x12; // Alt key
+    public const int VK_ESCAPE = 0x1B;
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
 
     // Structures
     [StructLayout(LayoutKind.Sequential)]
