@@ -55,6 +55,12 @@ public static class IniSettings
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.WatermarkMargin = d;
             if (dict.TryGetValue("AltDragEnabled", out v))
                 if (bool.TryParse(v, out var b)) settings.AltDragEnabled = b;
+            if (dict.TryGetValue("AutoQuickWindows", out v))
+            {
+                settings.AutoQuickWindowProcessNames = v
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+            }
 
             Logger.Log($"[Settings] Loaded from {path}");
         }
@@ -88,6 +94,9 @@ public static class IniSettings
                 "",
                 "# AltDrag",
                 $"AltDragEnabled={settings.AltDragEnabled}",
+                "",
+                "# Auto Quick Windows (comma-separated process names without .exe)",
+                $"AutoQuickWindows={string.Join(",", settings.AutoQuickWindowProcessNames)}",
             };
             File.WriteAllLines(path, lines);
         }

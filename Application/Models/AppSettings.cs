@@ -16,6 +16,12 @@ public class AppSettings
     public double WatermarkOpacity { get; set; } = 0.35;
     public double WatermarkMargin { get; set; } = 40;
     public bool AltDragEnabled { get; set; } = true;
+    /// <summary>
+    /// Process names (without .exe) that should be auto-pinned as quick windows.
+    /// The panel scans for running processes with these names and adds their
+    /// main window. Entries are removed if the process exits, re-added if it relaunches.
+    /// </summary>
+    public List<string> AutoQuickWindowProcessNames { get; set; } = new();
     public bool StartWithWindows { get; set; } = false;
     public bool SystemHotkeysOverridden { get; set; } = false;
     public List<string> ExcludedProcessNames { get; set; } = new()

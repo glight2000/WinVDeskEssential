@@ -50,6 +50,16 @@ public class AppOrchestrator : IDisposable
         _hotkeyService = new HotkeyService(_hotkeyManager, _keyboardHook, _switchEngine, _configRepo);
         _windowDrag = new WindowDragService { Enabled = _appSettings.AltDragEnabled };
         _quickWindowService = new QuickWindowService(_vdService);
+        _quickWindowService.SetAutoProcessNames(_appSettings.AutoQuickWindowProcessNames);
+        // Persist the process-name set whenever the user picks/removes from the panel
+        _quickWindowService.AutoListChanged += OnQuickWindowListChanged;
+    }
+
+    private void OnQuickWindowListChanged()
+    {
+        _appSettings.AutoQuickWindowProcessNames = _quickWindowService.GetAutoProcessNames();
+        IniSettings.Save(_appSettings);
+        Logger.Log("[App] Quick window list persisted");
     }
 
     public void Initialize(Window mainWindow)
@@ -257,9 +267,18 @@ public class AppOrchestrator : IDisposable
     private void OpenSettings()
     {
         var settingsWindow = new SettingsWindow(_appSettings, _hotkeyService);
-        settingsWindow.ShowDialog();
+        var result = settingsWindow.ShowDialog();
+        if (result != true) return;  // User cancelled
+
         var updated = settingsWindow.GetUpdatedSettings();
         _windowEnumerator = new WindowEnumerator(updated);
+
+        // Apply auto quick-window list immediately (triggers reconcile)
+        _quickWindowService.SetAutoProcessNames(updated.AutoQuickWindowProcessNames);
+
+        // Persist to INI
+        IniSettings.Save(_appSettings);
+        Logger.Log("[App] Settings saved and applied");
     }
 
     /// <summary>
@@ -270,7 +289,8 @@ public class AppOrchestrator : IDisposable
     {
         _keyboardHook.Install();
         _windowDrag.Install();
-        Logger.Log("[App] Keyboard hook + AltDrag mouse hook installed (deferred, message loop is now active)");
+        _quickWindowService.StartAutoScanner();
+        Logger.Log("[App] Keyboard hook + AltDrag mouse hook + QuickWindow scanner started");
     }
 
     private void SavePanelPosition()

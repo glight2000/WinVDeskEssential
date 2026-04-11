@@ -132,12 +132,76 @@ public class DesktopSwitchEngine : IDisposable
     }
 
     /// <summary>
+    /// Re-enumerate live monitors and update each cached state's MonitorInfo by DeviceId.
+    /// Also refreshes the window tracker, which caches HMONITORs internally.
+    /// Called defensively before every desktop switch to survive display hot-plugs,
+    /// driver resets, or blackouts where HMONITOR handles change without app knowledge.
+    /// </summary>
+    public void RefreshMonitorStates()
+    {
+        try
+        {
+            var freshMonitors = _monitorService.GetAllMonitors();
+            var byDeviceId = freshMonitors.ToDictionary(m => m.DeviceId);
+
+            // Update existing states with fresh monitor info (handle/bounds may have changed)
+            var stale = new List<string>();
+            foreach (var kvp in _monitorStates)
+            {
+                if (byDeviceId.TryGetValue(kvp.Key, out var fresh))
+                {
+                    kvp.Value.Monitor = fresh;
+                }
+                else
+                {
+                    // Monitor disappeared — mark for removal (state is preserved if it returns)
+                    stale.Add(kvp.Key);
+                }
+            }
+            foreach (var deviceId in stale)
+            {
+                Logger.Log($"[SwitchEngine] Monitor disappeared: {deviceId}");
+                _monitorStates.Remove(deviceId);
+            }
+
+            // Add any newly-connected monitors with a fresh default state
+            foreach (var m in freshMonitors)
+            {
+                if (_monitorStates.ContainsKey(m.DeviceId)) continue;
+                Logger.Log($"[SwitchEngine] New monitor detected: {m.DeviceId}");
+                var systemDesktops = _vdService.GetAllDesktops();
+                var desktops = systemDesktops.Select((sd, i) => new DesktopSlot
+                {
+                    SystemDesktopId = sd.Id,
+                    Name = sd.Name.Length > 0 ? sd.Name : $"Desktop {i + 1}",
+                }).ToList();
+                _monitorStates[m.DeviceId] = new MonitorDesktopState
+                {
+                    Monitor = m,
+                    Desktops = desktops,
+                    CurrentIndex = 0,
+                };
+            }
+
+            // Tracker caches windows by HMONITOR — re-enumerate so new handles are picked up
+            _windowTracker.RefreshAll();
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SwitchEngine] RefreshMonitorStates failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Switch desktop on a specific monitor. Other monitors' windows stay put.
     /// </summary>
     public void SwitchDesktop(string monitorDeviceId, int targetIndex)
     {
         lock (_switchLock)
         {
+            // Refresh monitor state — display hot-plug / driver reset may have invalidated HMONITORs
+            RefreshMonitorStates();
+
             if (!_monitorStates.TryGetValue(monitorDeviceId, out var state))
             {
                 Logger.Log($"[SwitchEngine] Monitor {monitorDeviceId} not found");
@@ -205,6 +269,9 @@ public class DesktopSwitchEngine : IDisposable
             lock (_switchLock)
             {
                 if (_isSwitching) return;
+
+                // Refresh monitor state — display hot-plug / driver reset may have invalidated HMONITORs
+                RefreshMonitorStates();
 
                 var cursorMonitor = _monitorService.GetMonitorFromCursor();
                 if (cursorMonitor == null) return;

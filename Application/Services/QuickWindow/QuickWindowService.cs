@@ -9,10 +9,18 @@ using System.Text;
 namespace WinVDeskEssential.Services.QuickWindow;
 
 /// <summary>
-/// Manages a user-curated list of "quick-access" windows.
-/// - PickWindow(): enters picker mode; next click on any window captures it.
-/// - ActivateWindow(): moves the target window to the current virtual desktop and brings it to front.
-/// - Uses a temporary low-level mouse hook for click picking, and ESC key-state polling to cancel.
+/// Manages a persistent, process-name-driven list of quick-access windows.
+///
+/// Unified model:
+///   - The list of "pinned apps" is a set of process names (case-insensitive).
+///   - A scanner periodically binds each name to the currently-running process's
+///     main window. Entries survive app exit/restart — the scanner re-binds on relaunch.
+///   - Clicking "+" and picking a window adds its process name to the set.
+///   - Right-clicking an entry removes its process name from the set.
+///   - Settings UI can edit the set directly.
+///
+/// Callers are notified via <see cref="AutoListChanged"/> whenever the set changes
+/// from within the service (picker / remove), so AppSettings can be updated and persisted.
 /// </summary>
 public class QuickWindowService : IDisposable
 {
@@ -22,6 +30,13 @@ public class QuickWindowService : IDisposable
 
     public bool IsPicking { get; private set; }
     public event Action? PickingStateChanged;
+
+    /// <summary>
+    /// Raised when the underlying process-name set changes via a user action
+    /// (picker added or right-click removed). Not raised when SetAutoProcessNames
+    /// is called externally (the caller already knows).
+    /// </summary>
+    public event Action? AutoListChanged;
 
     // Picker hook state
     private IntPtr _pickHookId = IntPtr.Zero;
@@ -33,9 +48,124 @@ public class QuickWindowService : IDisposable
     // HWNDs belonging to our own process — ignored by the picker
     private readonly HashSet<IntPtr> _ownHwnds = new();
 
+    // The persistent process-name set (case-insensitive)
+    private readonly HashSet<string> _autoNames = new(StringComparer.OrdinalIgnoreCase);
+    private System.Windows.Threading.DispatcherTimer? _scanTimer;
+
     public QuickWindowService(IVirtualDesktopService vdService)
     {
         _vdService = vdService;
+    }
+
+    /// <summary>
+    /// Replace the set of process names to auto-pin. Triggers an immediate reconcile.
+    /// Does NOT raise AutoListChanged (caller is the source of truth).
+    /// </summary>
+    public void SetAutoProcessNames(IEnumerable<string> names)
+    {
+        _autoNames.Clear();
+        foreach (var n in names)
+        {
+            if (!string.IsNullOrWhiteSpace(n))
+                _autoNames.Add(n.Trim());
+        }
+        Logger.Log($"[QuickWindow] Auto process names set: {string.Join(",", _autoNames)}");
+        ReconcileAutoWindows();
+    }
+
+    /// <summary>
+    /// Return a snapshot of the current process-name set (for persistence).
+    /// </summary>
+    public List<string> GetAutoProcessNames() => _autoNames.ToList();
+
+    /// <summary>
+    /// Start the periodic scanner. Polls every 2 seconds to rebind after
+    /// app exit / restart and to pick up newly launched matching apps.
+    /// </summary>
+    public void StartAutoScanner()
+    {
+        if (_scanTimer != null) return;
+        _scanTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        _scanTimer.Tick += (_, _) => ReconcileAutoWindows();
+        _scanTimer.Start();
+        Logger.Log("[QuickWindow] Auto-scanner started (2s interval)");
+    }
+
+    /// <summary>
+    /// Reconcile the UI list with the name set and currently-running processes:
+    ///   - Drop entries whose process no longer has a valid main window
+    ///   - Drop entries whose process name is no longer in the set
+    ///   - Add entries for names in the set that don't have a live binding yet
+    /// </summary>
+    private void ReconcileAutoWindows()
+    {
+        // 1. Drop entries whose hwnd is dead OR whose name was removed from the set
+        for (int i = Windows.Count - 1; i >= 0; i--)
+        {
+            var qw = Windows[i];
+            bool dead = !NativeMethods.IsWindow(qw.Hwnd);
+            bool orphaned = !_autoNames.Contains(qw.ProcessName);
+            if (dead || orphaned)
+            {
+                Logger.Log($"[QuickWindow] Dropping '{qw.ProcessName}' (dead={dead}, orphaned={orphaned})");
+                Windows.RemoveAt(i);
+            }
+        }
+
+        if (_autoNames.Count == 0) return;
+
+        // 2. Build covered set
+        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var w in Windows)
+            covered.Add(w.ProcessName);
+
+        // 3. For each missing name, try to bind to a running process
+        foreach (var name in _autoNames)
+        {
+            if (covered.Contains(name)) continue;
+
+            var hwnd = FindTopLevelWindowForProcess(name);
+            if (hwnd == IntPtr.Zero) continue;
+
+            Windows.Add(new Models.QuickWindow
+            {
+                Hwnd = hwnd,
+                ProcessName = name,
+                Title = name,
+            });
+            Logger.Log($"[QuickWindow] Bound '{name}' hwnd=0x{hwnd:X}");
+        }
+    }
+
+    /// <summary>
+    /// Find a top-level window for any running process with the given name.
+    /// Uses Process.MainWindowHandle — the first visible top-level window with a caption.
+    /// </summary>
+    private static IntPtr FindTopLevelWindowForProcess(string processName)
+    {
+        try
+        {
+            var processes = Process.GetProcessesByName(processName);
+            foreach (var p in processes)
+            {
+                try
+                {
+                    var hwnd = p.MainWindowHandle;
+                    if (hwnd != IntPtr.Zero && NativeMethods.IsWindow(hwnd))
+                        return hwnd;
+                }
+                catch { }
+                finally { p.Dispose(); }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[QuickWindow] FindTopLevelWindowForProcess('{processName}') failed: {ex.Message}");
+        }
+        return IntPtr.Zero;
     }
 
     public void RegisterOwnWindow(IntPtr hwnd)
@@ -44,7 +174,7 @@ public class QuickWindowService : IDisposable
     }
 
     /// <summary>
-    /// Enter picker mode. The next click on a foreign top-level window adds it.
+    /// Enter picker mode. The next click on a foreign top-level window adds its process name.
     /// Press ESC to cancel.
     /// </summary>
     public void StartPicking()
@@ -73,7 +203,7 @@ public class QuickWindowService : IDisposable
         PickingStateChanged?.Invoke();
         Logger.Log("[QuickWindow] Picker mode started");
 
-        // Poll ESC to cancel (can't use keyboard hook here because it's separate)
+        // Poll ESC to cancel
         _escTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(50)
@@ -144,44 +274,55 @@ public class QuickWindowService : IDisposable
         if ((exStyle & NativeMethods.WS_EX_TOOLWINDOW) != 0)
             return NativeMethods.CallNextHookEx(_pickHookId, nCode, wParam, lParam);
 
-        // Capture this window
         var pickedHwnd = hwnd;
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
         {
-            AddWindow(pickedHwnd);
+            AddPickedWindow(pickedHwnd);
             CleanupPicker();
             PickingStateChanged?.Invoke();
         });
 
-        // Swallow the click so the target window isn't activated incorrectly
+        // Swallow the click so the target window isn't activated by the OS
         return (IntPtr)1;
     }
 
-    private void AddWindow(IntPtr hwnd)
+    private void AddPickedWindow(IntPtr hwnd)
     {
-        // De-dupe
-        if (Windows.Any(w => w.Hwnd == hwnd))
+        var proc = GetProcessName(hwnd);
+        if (string.IsNullOrEmpty(proc))
         {
-            Logger.Log($"[QuickWindow] Already in list, skipping hwnd=0x{hwnd:X}");
+            Logger.Log($"[QuickWindow] Could not resolve process for hwnd=0x{hwnd:X}, ignoring");
             return;
         }
 
-        var title = GetWindowTitle(hwnd);
-        var proc = GetProcessName(hwnd);
-        var display = !string.IsNullOrEmpty(proc) ? proc : title;
-
-        Windows.Add(new Models.QuickWindow
+        // De-dupe by process name
+        if (_autoNames.Contains(proc))
         {
-            Hwnd = hwnd,
-            Title = display,
-            ProcessName = proc,
-        });
-        Logger.Log($"[QuickWindow] Added: '{display}' hwnd=0x{hwnd:X}");
+            Logger.Log($"[QuickWindow] Process '{proc}' already pinned, skipping");
+            return;
+        }
+
+        _autoNames.Add(proc);
+        Logger.Log($"[QuickWindow] Added '{proc}' to auto list (from picker)");
+        ReconcileAutoWindows();
+        AutoListChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Remove a quick window by dropping its process name from the persistent set.
+    /// Triggers reconcile + AutoListChanged so callers can persist.
+    /// </summary>
     public void RemoveWindow(Models.QuickWindow qw)
     {
-        Windows.Remove(qw);
+        if (!_autoNames.Remove(qw.ProcessName))
+        {
+            // Not in the set — just remove from UI (shouldn't happen in unified model)
+            Windows.Remove(qw);
+            return;
+        }
+        Logger.Log($"[QuickWindow] Removed '{qw.ProcessName}' from auto list");
+        ReconcileAutoWindows();
+        AutoListChanged?.Invoke();
     }
 
     /// <summary>
@@ -189,14 +330,14 @@ public class QuickWindowService : IDisposable
     ///   - Not on current desktop  → move to current + restore + foreground
     ///   - On current, minimized   → restore + foreground
     ///   - On current, visible     → minimize
-    /// Removes the entry if the window is no longer valid.
+    /// If the hwnd is dead, reconcile immediately (scanner may find a new main window).
     /// </summary>
     public void ActivateWindow(Models.QuickWindow qw)
     {
         if (!NativeMethods.IsWindow(qw.Hwnd))
         {
-            Logger.Log($"[QuickWindow] Dead window, removing: hwnd=0x{qw.Hwnd:X}");
-            Windows.Remove(qw);
+            Logger.Log($"[QuickWindow] Dead hwnd, reconciling: '{qw.ProcessName}'");
+            ReconcileAutoWindows();
             return;
         }
 
@@ -205,7 +346,6 @@ public class QuickWindowService : IDisposable
 
         if (!onCurrent)
         {
-            // Case 1: Bring to current desktop
             _vdService.MoveWindowToCurrentDesktop(qw.Hwnd);
             if (minimized)
                 NativeMethods.ShowWindow(qw.Hwnd, NativeMethods.SW_RESTORE);
@@ -214,24 +354,15 @@ public class QuickWindowService : IDisposable
         }
         else if (minimized)
         {
-            // Case 2: Restore minimized window on current desktop
             NativeMethods.ShowWindow(qw.Hwnd, NativeMethods.SW_RESTORE);
             NativeMethods.SetForegroundWindow(qw.Hwnd);
             Logger.Log($"[QuickWindow] Restored '{qw.Title}'");
         }
         else
         {
-            // Case 3: Visible on current → minimize
             NativeMethods.ShowWindow(qw.Hwnd, NativeMethods.SW_MINIMIZE);
             Logger.Log($"[QuickWindow] Minimized '{qw.Title}'");
         }
-    }
-
-    private static string GetWindowTitle(IntPtr hwnd)
-    {
-        var sb = new StringBuilder(256);
-        NativeMethods.GetWindowText(hwnd, sb, sb.Capacity);
-        return sb.ToString();
     }
 
     private static string GetProcessName(IntPtr hwnd)
@@ -239,7 +370,7 @@ public class QuickWindowService : IDisposable
         try
         {
             NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
-            var proc = Process.GetProcessById((int)pid);
+            using var proc = Process.GetProcessById((int)pid);
             return proc.ProcessName;
         }
         catch
@@ -250,6 +381,8 @@ public class QuickWindowService : IDisposable
 
     public void Dispose()
     {
+        _scanTimer?.Stop();
+        _scanTimer = null;
         CleanupPicker();
         s_instance = null;
     }

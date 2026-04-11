@@ -28,7 +28,12 @@
         </Style>
     </Window.Resources>
 
-    <TabControl Background="Transparent" BorderThickness="0" Margin="16">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TabControl Grid.Row="0" Background="Transparent" BorderThickness="0" Margin="16">
         <TabControl.Resources>
             <Style TargetType="TabItem">
                 <Setter Property="Foreground" Value="#99FFFFFF" />
@@ -73,6 +78,15 @@
                         </ComboBox>
                     </Grid>
                     <CheckBox x:Name="AnimationCheckbox" Content="Enable panel animation" IsChecked="True" />
+
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="Quick Windows" />
+                    <TextBlock Foreground="#80FFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                               Text="Process names (without .exe) that should be auto-pinned as quick windows on the panel. One per line. These survive app restart — the scanner re-binds on relaunch." />
+                    <TextBox x:Name="AutoQuickWindowsBox"
+                             Height="80" AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             Background="#20FFFFFF" Foreground="White" BorderBrush="#40FFFFFF"
+                             FontFamily="Consolas" Padding="4" />
 
                     <TextBlock Style="{StaticResource SectionTitle}" Text="Startup" />
                     <CheckBox x:Name="AutoStartCheckbox" Content="Start with Windows" />
@@ -155,5 +169,15 @@
                            FontSize="11" Foreground="#50FFFFFF" HorizontalAlignment="Center" />
             </StackPanel>
         </TabItem>
-    </TabControl>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,16">
+            <Button x:Name="SaveBtn" Content="Save" Padding="16,6" Margin="0,0,8,0"
+                    Background="#FF3B82F6" Foreground="White" BorderThickness="0"
+                    Click="OnSaveClick" />
+            <Button x:Name="CancelBtn" Content="Cancel" Padding="16,6"
+                    Background="#FF6B7280" Foreground="White" BorderThickness="0"
+                    Click="OnCancelClick" />
+        </StackPanel>
+    </Grid>
 </Window>
