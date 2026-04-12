@@ -3,6 +3,7 @@ using WinVDeskEssential.Models;
 using WinVDeskEssential.Services.Desktop;
 using WinVDeskEssential.Services.Hotkey;
 using WinVDeskEssential.Services.Interop;
+using WinVDeskEssential.Services.MonitorPin;
 using WinVDeskEssential.Services.Overlay;
 using WinVDeskEssential.Services.QuickWindow;
 using WinVDeskEssential.Services.Wallpaper;
@@ -28,6 +29,7 @@ public class AppOrchestrator : IDisposable
     private readonly HotkeyService _hotkeyService;
     private readonly WindowDragService _windowDrag;
     private readonly QuickWindowService _quickWindowService;
+    private readonly MonitorPinService _monitorPinService;
     private readonly ConfigRepository _configRepo;
     private readonly AppSettings _appSettings;
     private SwitcherPanel? _panel;
@@ -51,8 +53,11 @@ public class AppOrchestrator : IDisposable
         _windowDrag = new WindowDragService { Enabled = _appSettings.AltDragEnabled };
         _quickWindowService = new QuickWindowService(_vdService);
         _quickWindowService.SetAutoProcessNames(_appSettings.AutoQuickWindowProcessNames);
-        // Persist the process-name set whenever the user picks/removes from the panel
         _quickWindowService.AutoListChanged += OnQuickWindowListChanged;
+
+        _monitorPinService = new MonitorPinService(_vdService);
+        _monitorPinService.SetConfig(_appSettings.MonitorPinnedWindows);
+        _monitorPinService.ConfigChanged += OnMonitorPinConfigChanged;
     }
 
     private void OnQuickWindowListChanged()
@@ -60,6 +65,13 @@ public class AppOrchestrator : IDisposable
         _appSettings.AutoQuickWindowProcessNames = _quickWindowService.GetAutoProcessNames();
         IniSettings.Save(_appSettings);
         Logger.Log("[App] Quick window list persisted");
+    }
+
+    private void OnMonitorPinConfigChanged()
+    {
+        _appSettings.MonitorPinnedWindows = _monitorPinService.GetConfig();
+        IniSettings.Save(_appSettings);
+        Logger.Log("[App] Monitor pin config persisted");
     }
 
     public void Initialize(Window mainWindow)
@@ -144,6 +156,7 @@ public class AppOrchestrator : IDisposable
         _switchEngine.Initialize(monitorStates);
         _switchEngine.DesktopSwitched += OnDesktopSwitched;
         _switchEngine.DesktopListChanged += OnDesktopListChanged;
+        _switchEngine.GetPinnedWindowHwnds = () => _monitorPinService.GetAllBoundHwnds();
 
         // 6. Initialize overlays
         _overlayManager.Initialize();
@@ -156,13 +169,15 @@ public class AppOrchestrator : IDisposable
                         ?? monitorStates.Values.First();
         _primaryMonitorId = primaryState.Monitor.DeviceId;
         {
-            var vm = new SwitcherPanelViewModel(_switchEngine, _quickWindowService);
+            var vm = new SwitcherPanelViewModel(_switchEngine, _quickWindowService, _monitorPinService);
             vm.SetMonitor(primaryState.Monitor.DeviceId, primaryState.Monitor.DisplayName);
+            vm.SetMonitors(monitors);
             vm.SettingsRequested += OpenSettings;
 
             _panel = new SwitcherPanel(vm, primaryState.Monitor);
             _panel.Show();
             _quickWindowService.RegisterOwnWindow(_panel.GetHwnd());
+            _monitorPinService.RegisterOwnWindow(_panel.GetHwnd());
 
             // Restore saved position or use default
             if (!double.IsNaN(_appSettings.PanelLeft) && !double.IsNaN(_appSettings.PanelTop))
@@ -290,7 +305,8 @@ public class AppOrchestrator : IDisposable
         _keyboardHook.Install();
         _windowDrag.Install();
         _quickWindowService.StartAutoScanner();
-        Logger.Log("[App] Keyboard hook + AltDrag mouse hook + QuickWindow scanner started");
+        _monitorPinService.StartScanner();
+        Logger.Log("[App] Hooks + scanners started");
     }
 
     private void SavePanelPosition()
@@ -387,6 +403,7 @@ public class AppOrchestrator : IDisposable
         _hotkeyService.Dispose();
         _windowDrag.Dispose();
         _quickWindowService.Dispose();
+        _monitorPinService.Dispose();
         _switchEngine.Dispose();
         _windowTracker.Dispose();
         _overlayManager.Dispose();

@@ -29,6 +29,7 @@ public class KeyboardHookManager : IDisposable
     {
         s_instance = this;
         s_proc = StaticHookCallback;
+        if (s_gcHandle.IsAllocated) s_gcHandle.Free();
         s_gcHandle = GCHandle.Alloc(s_proc);
 
         var hMod = NativeMethods.GetModuleHandle("user32.dll");

@@ -183,6 +183,7 @@ public class QuickWindowService : IDisposable
 
         s_instance = this;
         s_pickProc = StaticPickCallback;
+        if (s_pickGcHandle.IsAllocated) s_pickGcHandle.Free();
         s_pickGcHandle = GCHandle.Alloc(s_pickProc);
 
         var hMod = NativeMethods.GetModuleHandle("user32.dll");

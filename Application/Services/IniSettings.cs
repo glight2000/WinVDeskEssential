@@ -1,7 +1,7 @@
 using WinVDeskEssential.Models;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
+using System.Text.Json;
 
 namespace WinVDeskEssential.Services;
 
@@ -43,6 +43,8 @@ public static class IniSettings
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.PanelLeft = d;
             if (dict.TryGetValue("PanelTop", out v))
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.PanelTop = d;
+            if (dict.TryGetValue("PanelPinned", out v))
+                if (bool.TryParse(v, out var b)) settings.PanelPinned = b;
             if (dict.TryGetValue("WatermarkAlwaysOn", out v))
                 if (bool.TryParse(v, out var b)) settings.WatermarkAlwaysOn = b;
             if (dict.TryGetValue("WatermarkPosition", out v))
@@ -53,6 +55,8 @@ public static class IniSettings
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.WatermarkOpacity = d;
             if (dict.TryGetValue("WatermarkMargin", out v))
                 if (double.TryParse(v, CultureInfo.InvariantCulture, out var d)) settings.WatermarkMargin = d;
+            if (dict.TryGetValue("StartWithWindows", out v))
+                if (bool.TryParse(v, out var b)) settings.StartWithWindows = b;
             if (dict.TryGetValue("AltDragEnabled", out v))
                 if (bool.TryParse(v, out var b)) settings.AltDragEnabled = b;
             if (dict.TryGetValue("AutoQuickWindows", out v))
@@ -60,6 +64,30 @@ public static class IniSettings
                 settings.AutoQuickWindowProcessNames = v
                     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .ToList();
+            }
+            if (dict.TryGetValue("ExcludedProcessNames", out v) && !string.IsNullOrEmpty(v))
+            {
+                settings.ExcludedProcessNames = v
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+            }
+            if (dict.TryGetValue("ExcludedWindowClasses", out v) && !string.IsNullOrEmpty(v))
+            {
+                settings.ExcludedWindowClasses = v
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+            }
+            if (dict.TryGetValue("MonitorPinnedWindows", out v) && !string.IsNullOrEmpty(v))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<Dictionary<string, List<MonitorPinConfig>>>(v);
+                    if (parsed != null) settings.MonitorPinnedWindows = parsed;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[Settings] MonitorPinnedWindows parse failed: {ex.Message}");
+                }
             }
 
             Logger.Log($"[Settings] Loaded from {path}");
@@ -84,6 +112,7 @@ public static class IniSettings
                 $"PanelDockPosition={settings.PanelDockPosition}",
                 $"PanelLeft={settings.PanelLeft.ToString(ci)}",
                 $"PanelTop={settings.PanelTop.ToString(ci)}",
+                $"PanelPinned={settings.PanelPinned}",
                 "",
                 "# Watermark",
                 $"WatermarkAlwaysOn={settings.WatermarkAlwaysOn}",
@@ -92,11 +121,19 @@ public static class IniSettings
                 $"WatermarkOpacity={settings.WatermarkOpacity.ToString(ci)}",
                 $"WatermarkMargin={settings.WatermarkMargin.ToString(ci)}",
                 "",
-                "# AltDrag",
+                "# General",
+                $"StartWithWindows={settings.StartWithWindows}",
                 $"AltDragEnabled={settings.AltDragEnabled}",
+                "",
+                "# Window Filters (comma-separated)",
+                $"ExcludedProcessNames={string.Join(",", settings.ExcludedProcessNames)}",
+                $"ExcludedWindowClasses={string.Join(",", settings.ExcludedWindowClasses)}",
                 "",
                 "# Auto Quick Windows (comma-separated process names without .exe)",
                 $"AutoQuickWindows={string.Join(",", settings.AutoQuickWindowProcessNames)}",
+                "",
+                "# Monitor pinned windows (JSON)",
+                $"MonitorPinnedWindows={JsonSerializer.Serialize(settings.MonitorPinnedWindows)}",
             };
             File.WriteAllLines(path, lines);
         }

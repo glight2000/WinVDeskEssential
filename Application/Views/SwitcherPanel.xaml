@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:WinVDeskEssential.ViewModels"
         xmlns:models="clr-namespace:WinVDeskEssential.Models"
-        xmlns:controls="clr-namespace:System.Windows.Controls;assembly=PresentationFramework"
         Title="WinVDeskEssential"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -13,181 +12,333 @@
         Background="Transparent"
         SizeToContent="WidthAndHeight">
 
-    <Border Background="#E6202020" CornerRadius="6" BorderBrush="#40FFFFFF" BorderThickness="1"
-            Margin="2" Padding="2">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.4" Color="Black" />
-        </Border.Effect>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Window.Resources>
 
-        <StackPanel Orientation="{Binding PanelOrientation}">
+    <!-- Outer wrapper: stacks [main panel, expand toggle, expand area]
+         in the direction perpendicular to the main panel flow. -->
+    <StackPanel Orientation="{Binding CrossOrientation}">
 
-            <!-- 1. Drag handle: start padding, easy to grab -->
-            <Border x:Name="DragHandle"
-                    Background="#25FFFFFF"
-                    CornerRadius="4"
-                    Margin="2"
-                    MinWidth="20" MinHeight="20"
-                    Cursor="SizeAll"
-                    MouseLeftButtonDown="OnDragStart"
-                    ToolTip="Drag to move panel">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Width" Value="20" />
-                        <Setter Property="Height" Value="36" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
-                                <Setter Property="Width" Value="110" />
-                                <Setter Property="Height" Value="20" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <TextBlock Foreground="#BBFFFFFF"
-                           FontSize="12"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           IsHitTestVisible="False">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="⋮" />
+        <!-- =========================  MAIN PANEL  ========================= -->
+        <Border Background="#E6202020" CornerRadius="6" BorderBrush="#40FFFFFF" BorderThickness="1"
+                Margin="2" Padding="2">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.4" Color="Black" />
+            </Border.Effect>
+
+            <StackPanel Orientation="{Binding PanelOrientation}">
+
+                <!-- 1. Drag handle -->
+                <Border x:Name="DragHandle"
+                        Background="#25FFFFFF"
+                        CornerRadius="4"
+                        Margin="2"
+                        Cursor="SizeAll"
+                        MouseLeftButtonDown="OnDragStart"
+                        ToolTip="Drag to move panel">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Width" Value="20" />
+                            <Setter Property="Height" Value="36" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
-                                    <Setter Property="Text" Value="···" />
+                                    <Setter Property="Width" Value="110" />
+                                    <Setter Property="Height" Value="20" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Border>
+                    </Border.Style>
+                    <TextBlock Foreground="#BBFFFFFF" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsHitTestVisible="False">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="⋮" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
+                                        <Setter Property="Text" Value="···" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
 
-            <!-- 2. Virtual desktop list -->
-            <ItemsControl ItemsSource="{Binding Desktops}" x:Name="DesktopList">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:DesktopSlotViewModel}">
-                        <Border Width="110" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
-                                BorderThickness="2" x:Name="ItemBorder"
-                                MouseLeftButtonUp="OnItemClick" Tag="{Binding}">
-                            <Border.Background>
-                                <SolidColorBrush Color="#30FFFFFF" />
-                            </Border.Background>
+                <!-- 2. Virtual desktops -->
+                <ItemsControl ItemsSource="{Binding Desktops}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DesktopSlotViewModel}">
+                            <Border Width="110" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                                    BorderThickness="2" x:Name="ItemBorder"
+                                    MouseLeftButtonUp="OnItemClick" Tag="{Binding}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#30FFFFFF" />
+                                </Border.Background>
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="White" FontSize="13" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextAlignment="Center" TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis" Margin="6"
+                                           IsHitTestVisible="False" />
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{Binding ActiveBorderBrush}" />
+                                    <Setter TargetName="ItemBorder" Property="Background">
+                                        <Setter.Value>
+                                            <SolidColorBrush Color="#50FFFFFF" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="Transparent" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                            <TextBlock Text="{Binding Name}"
-                                       Foreground="White" FontSize="13" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       TextAlignment="Center"
-                                       TextWrapping="Wrap"
-                                       TextTrimming="CharacterEllipsis"
-                                       Margin="6"
-                                       IsHitTestVisible="False" />
-                        </Border>
-                        <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                        Value="{Binding ActiveBorderBrush}" />
-                                <Setter TargetName="ItemBorder" Property="Background">
-                                    <Setter.Value>
-                                        <SolidColorBrush Color="#50FFFFFF" />
-                                    </Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsActive}" Value="False">
-                                <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                        Value="Transparent" />
-                            </DataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <!-- 3. Separator -->
+                <Border Background="#50FFFFFF" Margin="4">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Width" Value="2" />
+                            <Setter Property="Height" Value="28" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
+                                    <Setter Property="Width" Value="90" />
+                                    <Setter Property="Height" Value="2" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
 
-            <!-- 3. Separator between desktops and quick windows -->
-            <Border x:Name="SectionSeparator" Background="#50FFFFFF" Margin="4">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Width" Value="2" />
-                        <Setter Property="Height" Value="28" />
+                <!-- 4. Quick windows -->
+                <ItemsControl ItemsSource="{Binding QuickWindows}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:QuickWindow}">
+                            <Border Width="110" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                                    BorderThickness="2" BorderBrush="#405BA7F8"
+                                    MouseLeftButtonUp="OnQuickWindowClick"
+                                    MouseRightButtonUp="OnQuickWindowRightClick"
+                                    Tag="{Binding}" ToolTip="{Binding Title}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#25A0C8FF" />
+                                </Border.Background>
+                                <TextBlock Text="{Binding Title}"
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextAlignment="Center" TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis" Margin="6,0"
+                                           IsHitTestVisible="False" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 5. "+" picker for quick windows -->
+                <Border Width="36" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                        BorderThickness="2" BorderBrush="#60FFFFFF"
+                        MouseLeftButtonUp="OnPickerClick"
+                        ToolTip="Click, then click any window to pin it (ESC to cancel)">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#15FFFFFF" />
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPickingWindow}" Value="True">
+                                    <Setter Property="BorderBrush" Value="#FF5BA7F8" />
+                                    <Setter Property="Background">
+                                        <Setter.Value>
+                                            <SolidColorBrush Color="#405BA7F8" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="+" Foreground="#CCFFFFFF" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsHitTestVisible="False" />
+                </Border>
+
+            </StackPanel>
+        </Border>
+        <!-- ========================= /MAIN PANEL ========================= -->
+
+        <!-- =====================  EXPAND TOGGLE BUTTON  ===================== -->
+        <Border Background="#C0202020" BorderBrush="#40FFFFFF" BorderThickness="1"
+                CornerRadius="4" Margin="2,0,2,2" Padding="8,2"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Cursor="Hand"
+                MouseLeftButtonUp="OnToggleExpand">
+            <TextBlock Foreground="#CCFFFFFF" FontSize="11" FontWeight="Bold"
+                       IsHitTestVisible="False">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="▼ Monitors ▼" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
-                                <Setter Property="Width" Value="90" />
-                                <Setter Property="Height" Value="2" />
+                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                <Setter Property="Text" Value="▲ Monitors ▲" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </Border.Style>
-            </Border>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
+        <!-- ===================== /EXPAND TOGGLE BUTTON ===================== -->
 
-            <!-- 4. Quick window list -->
-            <ItemsControl ItemsSource="{Binding QuickWindows}" x:Name="QuickList">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type models:QuickWindow}">
-                        <Border Width="110" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
-                                BorderThickness="2" BorderBrush="#405BA7F8"
-                                MouseLeftButtonUp="OnQuickWindowClick"
-                                MouseRightButtonUp="OnQuickWindowRightClick"
-                                Tag="{Binding}"
-                                ToolTip="{Binding Title}">
-                            <Border.Background>
-                                <SolidColorBrush Color="#25A0C8FF" />
-                            </Border.Background>
-                            <TextBlock Text="{Binding Title}"
-                                       Foreground="White" FontSize="12" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       TextAlignment="Center"
-                                       TextWrapping="NoWrap"
-                                       TextTrimming="CharacterEllipsis"
-                                       Margin="6,0"
-                                       IsHitTestVisible="False" />
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <!-- ==========================  EXPAND AREA  ========================== -->
+        <Border Background="#E6202020" CornerRadius="6" BorderBrush="#40FFFFFF" BorderThickness="1"
+                Margin="2" Padding="4"
+                Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.4" Color="Black" />
+            </Border.Effect>
 
-            <!-- 5. "+" placeholder to pick a new window -->
-            <Border x:Name="PickerSlot"
-                    Width="36" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
-                    BorderThickness="2" BorderBrush="#60FFFFFF"
-                    MouseLeftButtonUp="OnPickerClick"
-                    ToolTip="Click, then click any window to pin it (ESC to cancel)">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Background">
-                            <Setter.Value>
-                                <SolidColorBrush Color="#15FFFFFF" />
-                            </Setter.Value>
-                        </Setter>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsPickingWindow}" Value="True">
-                                <Setter Property="BorderBrush" Value="#FF5BA7F8" />
-                                <Setter Property="Background">
-                                    <Setter.Value>
-                                        <SolidColorBrush Color="#405BA7F8" />
-                                    </Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <TextBlock Text="+"
-                           Foreground="#CCFFFFFF"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           IsHitTestVisible="False" />
-            </Border>
+            <StackPanel Orientation="{Binding PanelOrientation}">
 
-        </StackPanel>
-    </Border>
+                <!-- Monitor buttons -->
+                <ItemsControl ItemsSource="{Binding Monitors}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:MonitorButtonViewModel}">
+                            <Border Width="100" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                                    BorderThickness="2" BorderBrush="#40FFC060"
+                                    x:Name="MonBorder"
+                                    MouseLeftButtonUp="OnMonitorClick"
+                                    Tag="{Binding}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#25FFC060" />
+                                </Border.Background>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               Foreground="White" FontSize="12" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               IsHitTestVisible="False" />
+                                    <TextBlock Text="primary" Foreground="#B0FFE090" FontSize="9"
+                                               HorizontalAlignment="Center"
+                                               IsHitTestVisible="False"
+                                               Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="MonBorder" Property="BorderBrush" Value="#FFFFC060" />
+                                    <Setter TargetName="MonBorder" Property="Background">
+                                        <Setter.Value>
+                                            <SolidColorBrush Color="#50FFC060" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Separator between monitors and their pins -->
+                <Border Background="#50FFFFFF" Margin="4">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Width" Value="2" />
+                            <Setter Property="Height" Value="28" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PanelOrientation}" Value="Vertical">
+                                    <Setter Property="Width" Value="90" />
+                                    <Setter Property="Height" Value="2" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+
+                <!-- Pinned windows for the selected monitor -->
+                <ItemsControl ItemsSource="{Binding SelectedMonitorPins}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:PinnedWindow}">
+                            <Border Width="110" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                                    BorderThickness="2" BorderBrush="#40FFC060"
+                                    x:Name="PinBorder"
+                                    MouseLeftButtonUp="OnMonitorPinClick"
+                                    MouseRightButtonUp="OnMonitorPinRightClick"
+                                    Tag="{Binding}"
+                                    ToolTip="{Binding ProcessName}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#25FFC060" />
+                                </Border.Background>
+                                <TextBlock Text="{Binding DisplayTitle}"
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextAlignment="Center" TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis" Margin="6,0"
+                                           IsHitTestVisible="False" />
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsBound}" Value="False">
+                                    <Setter TargetName="PinBorder" Property="Opacity" Value="0.4" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- "+" picker for monitor pins -->
+                <Border Width="36" Height="36" Margin="2" CornerRadius="4" Cursor="Hand"
+                        BorderThickness="2"
+                        MouseLeftButtonUp="OnMonitorPinPickerClick"
+                        ToolTip="Click, then click any window to pin it to the selected monitor (ESC to cancel)">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="#60FFC060" />
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#15FFC060" />
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPickingMonitorPin}" Value="True">
+                                    <Setter Property="BorderBrush" Value="#FFFFC060" />
+                                    <Setter Property="Background">
+                                        <Setter.Value>
+                                            <SolidColorBrush Color="#50FFC060" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="+" Foreground="#CCFFE090" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsHitTestVisible="False" />
+                </Border>
+
+            </StackPanel>
+        </Border>
+        <!-- ========================= /EXPAND AREA ========================= -->
+
+    </StackPanel>
 </Window>

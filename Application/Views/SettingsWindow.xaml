@@ -77,7 +77,6 @@
                             <ComboBoxItem Content="Right" />
                         </ComboBox>
                     </Grid>
-                    <CheckBox x:Name="AnimationCheckbox" Content="Enable panel animation" IsChecked="True" />
 
                     <TextBlock Style="{StaticResource SectionTitle}" Text="Quick Windows" />
                     <TextBlock Foreground="#80FFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"

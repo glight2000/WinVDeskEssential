@@ -154,6 +154,45 @@ public partial class SwitcherPanel : Window
         _viewModel.PickQuickWindowCommand.Execute(null);
     }
 
+    // --- Expand area handlers ---
+
+    private void OnToggleExpand(object sender, MouseButtonEventArgs e)
+    {
+        _viewModel.ToggleExpandCommand.Execute(null);
+    }
+
+    private void OnMonitorClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDragging) return;
+        if (sender is Border b && b.Tag is ViewModels.MonitorButtonViewModel mb)
+        {
+            _viewModel.SelectMonitorCommand.Execute(mb);
+        }
+    }
+
+    private void OnMonitorPinClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDragging) return;
+        if (sender is Border b && b.Tag is Models.PinnedWindow pw)
+        {
+            _viewModel.ActivateMonitorPinCommand.Execute(pw);
+        }
+    }
+
+    private void OnMonitorPinRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border b && b.Tag is Models.PinnedWindow pw)
+        {
+            _viewModel.RemoveMonitorPinCommand.Execute(pw);
+        }
+    }
+
+    private void OnMonitorPinPickerClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDragging) return;
+        _viewModel.PickMonitorPinCommand.Execute(null);
+    }
+
     // --- Pin to all desktops ---
 
     public void PinToAllDesktops()

@@ -20,7 +20,6 @@ public partial class SettingsWindow : Window
     private void LoadSettings()
     {
         DockPositionCombo.SelectedIndex = (int)_settings.PanelDockPosition;
-        AnimationCheckbox.IsChecked = _settings.PanelAnimationEnabled;
         AutoStartCheckbox.IsChecked = _settings.StartWithWindows;
         AutoQuickWindowsBox.Text = string.Join("\n", _settings.AutoQuickWindowProcessNames);
         ExcludedProcessesBox.Text = string.Join("\n", _settings.ExcludedProcessNames);
@@ -35,7 +34,6 @@ public partial class SettingsWindow : Window
     public AppSettings GetUpdatedSettings()
     {
         _settings.PanelDockPosition = (DockPosition)DockPositionCombo.SelectedIndex;
-        _settings.PanelAnimationEnabled = AnimationCheckbox.IsChecked ?? true;
         _settings.StartWithWindows = AutoStartCheckbox.IsChecked ?? false;
         _settings.AutoQuickWindowProcessNames = AutoQuickWindowsBox.Text
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

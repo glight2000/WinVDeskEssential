@@ -33,10 +33,14 @@ public class DesktopSwitchEngine : IDisposable
     private List<string> _lastKnownDesktopNames = new();
 
     public event Action<string, DesktopSlot>? DesktopSwitched;
-    /// <summary>
-    /// Fired when the desktop list changes (add/remove/reorder) and the panel should refresh.
-    /// </summary>
     public event Action? DesktopListChanged;
+
+    /// <summary>
+    /// Callback injected by AppOrchestrator to get all pinned window HWNDs
+    /// (from MonitorPinService). These windows will be moved to the new desktop
+    /// on every switch, regardless of which monitor they're on.
+    /// </summary>
+    public Func<List<IntPtr>>? GetPinnedWindowHwnds { get; set; }
 
     public DesktopSwitchEngine(
         IVirtualDesktopService vdService,
@@ -221,9 +225,16 @@ public class DesktopSwitchEngine : IDisposable
             var targetDesktop = state.Desktops[targetIndex];
             Logger.Log($"[SwitchEngine] Switching monitor {monitorDeviceId} from {state.CurrentIndex} to {targetIndex} (sysId={targetDesktop.SystemDesktopId})");
 
-            // Step 1: Grab snapshot of OTHER monitors' windows BEFORE switching
+            // Step 1: Grab snapshot of OTHER monitors' windows + all pinned windows BEFORE switching
             var windowsToRestore = GetOtherMonitorsWindows(monitorDeviceId);
-            Logger.Log($"[SwitchEngine] Snapshot: {windowsToRestore.Count} windows on other monitors to preserve");
+            var pinnedHwnds = GetPinnedWindowHwnds?.Invoke();
+            if (pinnedHwnds != null)
+            {
+                var union = new HashSet<IntPtr>(windowsToRestore);
+                foreach (var h in pinnedHwnds) union.Add(h);
+                windowsToRestore = union.ToList();
+            }
+            Logger.Log($"[SwitchEngine] Snapshot: {windowsToRestore.Count} windows to preserve (includes pinned)");
 
             // Step 2: Perform system desktop switch
             _isSwitching = true;
@@ -276,32 +287,43 @@ public class DesktopSwitchEngine : IDisposable
                 var cursorMonitor = _monitorService.GetMonitorFromCursor();
                 if (cursorMonitor == null) return;
 
-                // Only intervene when switching from the PRIMARY monitor.
-                // If cursor is on a secondary monitor, do nothing — let Windows default behavior happen.
-                if (!cursorMonitor.IsPrimary)
+                // Collect pinned windows — these ALWAYS follow, regardless of which monitor is active
+                var pinnedHwnds = GetPinnedWindowHwnds?.Invoke() ?? new List<IntPtr>();
+
+                if (cursorMonitor.IsPrimary)
                 {
-                    Logger.Log($"[SwitchEngine] Cursor on secondary ({cursorMonitor.DeviceId}), skipping — default Windows behavior");
-                    _windowTracker.RefreshAll();
-                    return;
+                    // Primary switch: preserve secondary windows + all pinned windows
+                    var otherWindows = GetOtherMonitorsWindows(cursorMonitor.DeviceId);
+                    var union = new HashSet<IntPtr>(otherWindows);
+                    foreach (var h in pinnedHwnds) union.Add(h);
+
+                    Logger.Log($"[SwitchEngine] Primary switch: preserving {union.Count} windows ({otherWindows.Count} secondary + pinned)");
+                    MoveWindowsToDesktop(union.ToList(), newDesktopId);
+
+                    if (_monitorStates.TryGetValue(cursorMonitor.DeviceId, out var cursorState))
+                    {
+                        var targetIndex = cursorState.Desktops.FindIndex(d => d.SystemDesktopId == newDesktopId);
+                        if (targetIndex >= 0)
+                        {
+                            cursorState.CurrentIndex = targetIndex;
+                            DesktopSwitched?.Invoke(cursorMonitor.DeviceId, cursorState.Desktops[targetIndex]);
+                        }
+                    }
+                }
+                else
+                {
+                    // Secondary switch: still preserve pinned windows so they follow
+                    if (pinnedHwnds.Count > 0)
+                    {
+                        Logger.Log($"[SwitchEngine] Secondary switch: preserving {pinnedHwnds.Count} pinned windows");
+                        MoveWindowsToDesktop(pinnedHwnds, newDesktopId);
+                    }
+                    else
+                    {
+                        Logger.Log($"[SwitchEngine] Secondary switch: no pinned windows, default Windows behavior");
+                    }
                 }
 
-                if (!_monitorStates.TryGetValue(cursorMonitor.DeviceId, out var cursorState)) return;
-
-                var targetIndex = cursorState.Desktops.FindIndex(d => d.SystemDesktopId == newDesktopId);
-
-                Logger.Log($"[SwitchEngine] Primary switch: {cursorMonitor.DeviceId} -> index {targetIndex}");
-
-                // Move secondary monitors' windows TO the new desktop so they stay visible
-                var windowsToRestore = GetOtherMonitorsWindows(cursorMonitor.DeviceId);
-                Logger.Log($"[SwitchEngine] Keeping {windowsToRestore.Count} secondary windows visible");
-
-                MoveWindowsToDesktop(windowsToRestore, newDesktopId);
-
-                if (targetIndex >= 0)
-                {
-                    cursorState.CurrentIndex = targetIndex;
-                    DesktopSwitched?.Invoke(cursorMonitor.DeviceId, cursorState.Desktops[targetIndex]);
-                }
                 _windowTracker.RefreshAll();
             }
         });

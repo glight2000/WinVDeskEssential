@@ -8,8 +8,6 @@ public class AppSettings
     public double PanelLeft { get; set; } = double.NaN;
     public double PanelTop { get; set; } = double.NaN;
     public bool PanelPinned { get; set; } = false;
-    public bool PanelAnimationEnabled { get; set; } = true;
-    public int PanelAnimationDurationMs { get; set; } = 150;
     public bool WatermarkAlwaysOn { get; set; } = true;
     public CornerPosition WatermarkPosition { get; set; } = CornerPosition.BottomRight;
     public double WatermarkFontSize { get; set; } = 24;
@@ -22,6 +20,11 @@ public class AppSettings
     /// main window. Entries are removed if the process exits, re-added if it relaunches.
     /// </summary>
     public List<string> AutoQuickWindowProcessNames { get; set; } = new();
+    /// <summary>
+    /// Per-monitor pinned windows. Key = monitor DeviceId (e.g. "\\.\DISPLAY1"),
+    /// Value = list of (ProcessName, TitleKey) configs.
+    /// </summary>
+    public Dictionary<string, List<MonitorPinConfig>> MonitorPinnedWindows { get; set; } = new();
     public bool StartWithWindows { get; set; } = false;
     public bool SystemHotkeysOverridden { get; set; } = false;
     public List<string> ExcludedProcessNames { get; set; } = new()
